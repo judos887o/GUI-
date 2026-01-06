@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
 
 local old = CoreGui:FindFirstChild("SchmecktHub")
 if old then old:Destroy() end
@@ -39,29 +40,100 @@ getgenv().SchmecktHubPC = getgenv().SchmecktHubPC or {}
 local Shared = getgenv().SchmecktHubPC
 
 Shared.TotalExecutions = (Shared.TotalExecutions or 0) + 1
+Shared.AutoArmor = Shared.AutoArmor or false
+Shared.StaffNotifier = Shared.StaffNotifier or false
+Shared.TriggerBot = Shared.TriggerBot or false
+Shared.Camlock = Shared.Camlock or false
+Shared.SilentAim = Shared.SilentAim or false
+Shared.SilentAimMethod = Shared.SilentAimMethod
+Shared.Desync = Shared.Desync or false
+Shared.DisableDesync = Shared.DisableDesync or false
+Shared.FpsBoost = Shared.FpsBoost or false
+Shared.AutoReload = Shared.AutoReload or false
+Shared.PlayerPanel = Shared.PlayerPanel or false
+Shared.DragShoot = Shared.DragShoot or false
+Shared.TargetUsername = Shared.TargetUsername
+Shared.AutoKatanaKill = Shared.AutoKatanaKill or false
+Shared.Fling = Shared.Fling or false
+Shared.HighlightTarget = Shared.HighlightTarget or false
+Shared.ViewTarget = Shared.ViewTarget or false
+Shared.GotoTarget = Shared.GotoTarget or false
+Shared.InstantStomp = Shared.InstantStomp or false
+Shared.Platform = Shared.Platform or "PC"
 
-Shared.AutoArmor = false
-Shared.StaffNotifier = false
-Shared.TriggerBot = false
-Shared.Camlock = false
-Shared.SilentAim = false
-Shared.SilentAimMethod = nil
-Shared.Desync = false
-Shared.DisableDesync = false
-Shared.FpsBoost = false
-Shared.AutoReload = false
-Shared.PlayerPanel = false
-Shared.DragShoot = false
-Shared.TargetUsername = nil
-Shared.AutoKatanaKill = false
-Shared.Fling = false
-Shared.HighlightTarget = false
-Shared.ViewTarget = false
-Shared.GotoTarget = false
-Shared.InstantStomp = false
-
--- Connection Management für Scripts
 Shared.Connections = Shared.Connections or {}
+
+local CONFIG_DIR = "SchmecktHub"
+local CONFIG_FILE = CONFIG_DIR .. "/config.json"
+local FS_OK = (typeof(isfile) == "function" and typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(makefolder) == "function" and typeof(isfolder) == "function")
+
+local function serializeConfig()
+    return {
+        Platform = Shared.Platform,
+        SilentAimMethod = Shared.SilentAimMethod,
+        Toggles = {
+            AutoArmor = Shared.AutoArmor,
+            StaffNotifier = Shared.StaffNotifier,
+            TriggerBot = Shared.TriggerBot,
+            Camlock = Shared.Camlock,
+            SilentAim = Shared.SilentAim,
+            Desync = Shared.Desync,
+            DisableDesync = Shared.DisableDesync,
+            FpsBoost = Shared.FpsBoost,
+            AutoReload = Shared.AutoReload,
+            PlayerPanel = Shared.PlayerPanel,
+            DragShoot = Shared.DragShoot,
+            AutoKatanaKill = Shared.AutoKatanaKill,
+            Fling = Shared.Fling,
+            HighlightTarget = Shared.HighlightTarget,
+            ViewTarget = Shared.ViewTarget,
+            InstantStomp = Shared.InstantStomp,
+        }
+    }
+end
+
+local function applyConfig(cfg)
+    if not cfg then return end
+    Shared.Platform = cfg.Platform or Shared.Platform
+    Shared.SilentAimMethod = cfg.SilentAimMethod
+    local T = cfg.Toggles or {}
+    for k, v in pairs(T) do
+        if type(v) == "boolean" and Shared[k] ~= nil then
+            Shared[k] = v
+        end
+    end
+    if Shared.Platform == "Mobile" and (Shared.SilentAimMethod ~= "FOV" and Shared.SilentAimMethod ~= "MobileMethod") then
+        Shared.SilentAimMethod = "MobileMethod"
+    end
+end
+
+function Shared.SaveConfig()
+    local ok, err = pcall(function()
+        local json = HttpService:JSONEncode(serializeConfig())
+        if FS_OK then
+            if not isfolder(CONFIG_DIR) then makefolder(CONFIG_DIR) end
+            writefile(CONFIG_FILE, json)
+        else
+            getgenv()._SchmecktLastCfg = json
+        end
+    end)
+    if not ok then warn("[SchmecktHub] Save failed:", err) end
+end
+
+local function LoadConfig()
+    local raw
+    if FS_OK and isfile(CONFIG_FILE) then
+        raw = readfile(CONFIG_FILE)
+    elseif getgenv()._SchmecktLastCfg then
+        raw = getgenv()._SchmecktLastCfg
+    end
+    if raw then
+        local ok, data = pcall(function() return HttpService:JSONDecode(raw) end)
+        if ok and data then applyConfig(data) end
+    end
+end
+
+LoadConfig()
 
 local function safeLoad(url, key)
     task.spawn(function()
@@ -84,11 +156,59 @@ local function Load_DisableDesync() safeLoad("https://raw.githubusercontent.com/
 local function Load_FpsBoost() safeLoad("https://raw.githubusercontent.com/judos887o/fps-nuke/refs/heads/main/teat", "FpsBoost") end
 local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/target-schmeckt/refs/heads/main/teat", "Target") end
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/refs/heads/main/teats", "InstantStomp") end
+local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/refs/heads/main/teat", "SilentAim_Mobile") end
+local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/refs/heads/main/teat", "Camlock_Mobile") end
+
+local function Stop_SilentAim_Mobile()
+    local Mobile = getgenv().SchmecktHubMobile
+    if not Mobile then return end
+    Mobile.SilentAim = false
+    if Mobile.Connections and Mobile.Connections["SilentAimMobile"] then
+        for _, c in pairs(Mobile.Connections["SilentAimMobile"]) do pcall(function() c:Disconnect() end) end
+        Mobile.Connections["SilentAimMobile"] = nil
+    end
+    if Mobile._MobileGUI then pcall(function() Mobile._MobileGUI:Destroy() end) Mobile._MobileGUI = nil end
+end
+
+local function Stop_Camlock_PC()
+    local P = getgenv().SchmecktHubPC
+    if not P then return end
+    if P.Connections and (P.Connections["CamlockPC"] or P.Connections["Camlock"]) then
+        local t = P.Connections["CamlockPC"] or P.Connections["Camlock"]
+        for _, c in pairs(t) do pcall(function() c:Disconnect() end) end
+        P.Connections["CamlockPC"] = nil
+        P.Connections["Camlock"] = nil
+    end
+    if CoreGui:FindFirstChild("SchmecktCamlock") then CoreGui.SchmecktCamlock:Destroy() end
+end
+
+local function Stop_Camlock_Mobile()
+    local M = getgenv().SchmecktHubMobile
+    if not M then return end
+    if M.Connections and M.Connections["CamlockMobile"] then
+        for _, c in pairs(M.Connections["CamlockMobile"]) do pcall(function() c:Disconnect() end) end
+        M.Connections["CamlockMobile"] = nil
+    end
+    if M._CamlockGUI then pcall(function() M._CamlockGUI:Destroy() end) M._CamlockGUI = nil end
+end
+
+local function Load_SilentAim_ByMethod()
+    if Shared.SilentAimMethod == "FOV" then
+        Load_SilentAim_FOV()
+    elseif Shared.SilentAimMethod == "QMethod" then
+        Load_SilentAim_QMethod()
+    elseif Shared.SilentAimMethod == "MobileMethod" then
+        Load_SilentAim_Mobile_Remote()
+    end
+end
 
 local function DisableAllScripts()
     for k in pairs(Shared) do if type(Shared[k]) == "boolean" then Shared[k] = false end end
     Shared.TargetUsername = nil
     Shared.SilentAimMethod = nil
+    Stop_SilentAim_Mobile()
+    Stop_Camlock_PC()
+    Stop_Camlock_Mobile()
 end
 
 local function corner(inst, px)
@@ -140,6 +260,8 @@ end
 
 local allRows = {}
 local allScrollFrames = {}
+local ToggleAPIs = {}
+local RefreshAimPlatform = function() end
 
 local function registerRowForAnimation(row)
     table.insert(allRows, row)
@@ -149,7 +271,6 @@ local function registerRowForAnimation(row)
         row.BackgroundTransparency = 1
         row.TextTransparency = 1
     elseif row:IsA("TextLabel") then
-        row.BackgroundTransparency = row.BackgroundTransparency
         row.TextTransparency = 1
     end
     for _, child in ipairs(row:GetDescendants()) do
@@ -360,6 +481,229 @@ else
     subNameLabel.Text = "@Unknown"
 end
 
+local profileBtnCover = Instance.new("TextButton")
+profileBtnCover.BackgroundTransparency = 1
+profileBtnCover.Size = UDim2.new(1, 0, 1, 0)
+profileBtnCover.Text = ""
+profileBtnCover.ZIndex = 6
+profileBtnCover.Parent = profile
+addButtonSounds(profileBtnCover)
+
+local settingsOverlay = Instance.new("Frame")
+settingsOverlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
+settingsOverlay.BackgroundTransparency = 0.4
+settingsOverlay.Size = UDim2.new(1, 0, 1, 0)
+settingsOverlay.Visible = false
+settingsOverlay.ZIndex = 100
+settingsOverlay.Parent = gui
+
+local settingsWin = Instance.new("Frame")
+settingsWin.AnchorPoint = Vector2.new(0.5, 0.5)
+settingsWin.Position = UDim2.new(0.5, 0, 0.5, 0)
+settingsWin.Size = UDim2.new(0, 420, 0, 230)
+settingsWin.BackgroundColor3 = THEME.BgMain
+settingsWin.BorderSizePixel = 0
+settingsWin.ZIndex = 101
+settingsWin.Parent = settingsOverlay
+corner(settingsWin, 12)
+stroke(settingsWin, THEME.Stroke1, 2, 0.1)
+
+local settingsTop = Instance.new("Frame")
+settingsTop.BackgroundColor3 = THEME.BgTop
+settingsTop.Size = UDim2.new(1, -16, 0, 44)
+settingsTop.Position = UDim2.new(0, 8, 0, 8)
+settingsTop.BorderSizePixel = 0
+settingsTop.ZIndex = 102
+settingsTop.Parent = settingsWin
+corner(settingsTop, 10)
+stroke(settingsTop, THEME.Stroke2, 1, 0.2)
+
+local settingsTitle = Instance.new("TextLabel")
+settingsTitle.BackgroundTransparency = 1
+settingsTitle.Size = UDim2.new(1, -90, 1, 0)
+settingsTitle.Position = UDim2.new(0, 12, 0, 0)
+settingsTitle.Font = Enum.Font.GothamSemibold
+settingsTitle.Text = "Settings"
+settingsTitle.TextColor3 = THEME.Text
+settingsTitle.TextSize = 16
+settingsTitle.TextXAlignment = Enum.TextXAlignment.Left
+settingsTitle.ZIndex = 103
+settingsTitle.Parent = settingsTop
+
+local settingsClose = Instance.new("TextButton")
+settingsClose.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
+settingsClose.Size = UDim2.new(0, 30, 0, 30)
+settingsClose.Position = UDim2.new(1, -38, 0.5, -15)
+settingsClose.Font = Enum.Font.GothamBold
+settingsClose.Text = "X"
+settingsClose.TextColor3 = THEME.Text
+settingsClose.TextSize = 14
+settingsClose.ZIndex = 103
+settingsClose.Parent = settingsTop
+corner(settingsClose, 10)
+addButtonSounds(settingsClose)
+
+local settingsBody = Instance.new("Frame")
+settingsBody.BackgroundColor3 = THEME.BgInner
+settingsBody.Size = UDim2.new(1, -16, 1, -66)
+settingsBody.Position = UDim2.new(0, 8, 0, 58)
+settingsBody.BorderSizePixel = 0
+settingsBody.ZIndex = 102
+settingsBody.Parent = settingsWin
+corner(settingsBody, 10)
+stroke(settingsBody, THEME.Stroke2, 1, 0.2)
+padding(settingsBody, 10, 10, 10, 10)
+
+local headline = Instance.new("TextLabel")
+headline.BackgroundTransparency = 1
+headline.Size = UDim2.new(1, 0, 0, 20)
+headline.Font = Enum.Font.GothamSemibold
+headline.Text = "Choose Version"
+headline.TextColor3 = THEME.Text
+headline.TextSize = 14
+headline.TextXAlignment = Enum.TextXAlignment.Left
+headline.ZIndex = 103
+headline.Parent = settingsBody
+
+local btnRow = Instance.new("Frame")
+btnRow.BackgroundTransparency = 1
+btnRow.Size = UDim2.new(1, 0, 0, 40)
+btnRow.Position = UDim2.new(0, 0, 0, 28)
+btnRow.ZIndex = 103
+btnRow.Parent = settingsBody
+
+local btnLayout = Instance.new("UIListLayout", btnRow)
+btnLayout.FillDirection = Enum.FillDirection.Horizontal
+btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+btnLayout.Padding = UDim.new(0, 10)
+
+local pcBtn = Instance.new("TextButton")
+pcBtn.BackgroundColor3 = THEME.TabIdle
+pcBtn.Size = UDim2.new(0, 160, 1, 0)
+pcBtn.Text = "PC VERSION"
+pcBtn.Font = Enum.Font.GothamBold
+pcBtn.TextColor3 = THEME.Text
+pcBtn.TextSize = 14
+pcBtn.ZIndex = 104
+pcBtn.Parent = btnRow
+corner(pcBtn, 8)
+addButtonSounds(pcBtn)
+
+local mobBtn = Instance.new("TextButton")
+mobBtn.BackgroundColor3 = THEME.TabIdle
+mobBtn.Size = UDim2.new(0, 160, 1, 0)
+mobBtn.Text = "MOBILE VERSION"
+mobBtn.Font = Enum.Font.GothamBold
+mobBtn.TextColor3 = THEME.Text
+mobBtn.TextSize = 14
+mobBtn.ZIndex = 104
+mobBtn.Parent = btnRow
+corner(mobBtn, 8)
+addButtonSounds(mobBtn)
+
+local tip = Instance.new("TextLabel")
+tip.BackgroundTransparency = 1
+tip.Position = UDim2.new(0, 0, 0, 76)
+tip.Size = UDim2.new(1, 0, 0, 36)
+tip.Font = Enum.Font.Gotham
+tip.TextColor3 = THEME.SubText
+tip.TextSize = 12
+tip.TextWrapped = true
+tip.TextXAlignment = Enum.TextXAlignment.Left
+tip.TextYAlignment = Enum.TextYAlignment.Top
+tip.ZIndex = 103
+tip.Text = "Your selection will be saved. On MOBILE, you can choose Silent Aim FOV or Toggle method. Camlock Mobile is separate."
+tip.Parent = settingsBody
+
+local resetBtn = Instance.new("TextButton")
+resetBtn.BackgroundColor3 = THEME.Card2
+resetBtn.Size = UDim2.new(0, 160, 0, 30)
+resetBtn.Position = UDim2.new(0, 0, 1, -30)
+resetBtn.Text = "Reset saved settings"
+resetBtn.Font = Enum.Font.GothamSemibold
+resetBtn.TextColor3 = THEME.Text
+resetBtn.TextSize = 12
+resetBtn.ZIndex = 104
+resetBtn.Parent = settingsBody
+corner(resetBtn, 8)
+addButtonSounds(resetBtn)
+
+local doneBtn = Instance.new("TextButton")
+doneBtn.BackgroundColor3 = THEME.TabActive
+doneBtn.Size = UDim2.new(0, 120, 0, 30)
+doneBtn.Position = UDim2.new(1, -120, 1, -30)
+doneBtn.Text = "Done"
+doneBtn.Font = Enum.Font.GothamBold
+doneBtn.TextColor3 = THEME.Text
+doneBtn.TextSize = 13
+doneBtn.ZIndex = 104
+doneBtn.Parent = settingsBody
+corner(doneBtn, 8)
+addButtonSounds(doneBtn)
+
+local function refreshPlatformButtons()
+    if Shared.Platform == "Mobile" then
+        mobBtn.BackgroundColor3 = THEME.TabActive
+        pcBtn.BackgroundColor3 = THEME.TabIdle
+    else
+        pcBtn.BackgroundColor3 = THEME.TabActive
+        mobBtn.BackgroundColor3 = THEME.TabIdle
+    end
+end
+
+local function showSettings()
+    refreshPlatformButtons()
+    settingsOverlay.Visible = true
+    settingsWin.Size = UDim2.new(0, 0, 0, 0)
+    TweenService:Create(settingsWin, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 420, 0, 230)}):Play()
+end
+
+local function hideSettings()
+    settingsOverlay.Visible = false
+end
+
+local function setPlatform(p)
+    Shared.Platform = p
+    if Shared.Platform == "Mobile" then
+        if Shared.SilentAimMethod ~= "FOV" and Shared.SilentAimMethod ~= "MobileMethod" then
+            Shared.SilentAimMethod = "MobileMethod"
+        end
+    else
+        Stop_SilentAim_Mobile()
+        if Shared.SilentAimMethod == "MobileMethod" then Shared.SilentAimMethod = nil end
+    end
+    Shared.SaveConfig()
+    refreshPlatformButtons()
+    RefreshAimPlatform()
+    if Shared.SilentAim then Load_SilentAim_ByMethod() end
+    if Shared.Camlock then
+        if Shared.Platform == "Mobile" then
+            Load_Camlock_Mobile()
+        else
+            Load_Camlock()
+        end
+    end
+end
+
+profileBtnCover.MouseButton1Click:Connect(showSettings)
+settingsClose.MouseButton1Click:Connect(hideSettings)
+doneBtn.MouseButton1Click:Connect(hideSettings)
+pcBtn.MouseButton1Click:Connect(function() setPlatform("PC") end)
+mobBtn.MouseButton1Click:Connect(function() setPlatform("Mobile") end)
+resetBtn.MouseButton1Click:Connect(function()
+    for k, v in pairs(Shared) do
+        if type(v) == "boolean" then Shared[k] = false end
+    end
+    Stop_SilentAim_Mobile()
+    Stop_Camlock_PC()
+    Stop_Camlock_Mobile()
+    Shared.SilentAimMethod = nil
+    Shared.Platform = "PC"
+    Shared.SaveConfig()
+    refreshPlatformButtons()
+    RefreshAimPlatform()
+end)
+
 local content = Instance.new("Frame")
 content.Name = "Content"
 content.BackgroundColor3 = THEME.Content
@@ -424,6 +768,7 @@ local function createToggleRow(parent, text, order, callback)
         state = not state
         refresh()
         if callback then task.spawn(function() callback(state) end) end
+        if Shared.SaveConfig then Shared.SaveConfig() end
     end)
 
     registerRowForAnimation(row)
@@ -447,7 +792,6 @@ local function createActionButton(parent, text, order, callback)
     corner(btn, 10)
     stroke(btn, THEME.Stroke2, 1, 0.35)
     addButtonSounds(btn)
-
     registerRowForAnimation(btn)
     btn.MouseButton1Click:Connect(function() if callback then task.spawn(callback) end end)
     return btn
@@ -463,6 +807,7 @@ local tabs = {
 local tabButtons = {}
 local tabFrames = {}
 
+local aimPCContainer, aimMobileContainer
 local function createTabFrame(name)
     local scroll = Instance.new("ScrollingFrame")
     scroll.Name = name .. "_Page"
@@ -514,247 +859,403 @@ local function createTabFrame(name)
     registerRowForAnimation(header)
 
     if name == "Main" then
-        createToggleRow(innerFrame, "Auto Armor [PC]", 2, function(on) Shared.AutoArmor = on if on then Load_AutoArmor() end end)
-        createToggleRow(innerFrame, "Staff Notifier [PC]", 3, function(on) Shared.StaffNotifier = on if on then Load_StaffNotifier() end end)
-        createToggleRow(innerFrame, "Instant Stomp", 4, function(on) Shared.InstantStomp = on if on then Load_InstantStomp() end end)
-        createToggleRow(innerFrame, "Desync", 5, function(on) Shared.Desync = on if on then Load_Desync() end end)
-        createToggleRow(innerFrame, "Disable Desync", 6, function(on) Shared.DisableDesync = on if on then Load_DisableDesync() end end)
-        createToggleRow(innerFrame, "Fps Boost", 7, function(on) Shared.FpsBoost = on if on then Load_FpsBoost() end end)
-        createToggleRow(innerFrame, "Player Panel [PC]", 8, function(on) Shared.PlayerPanel = on if on then Load_PlayerPanel() end end)
-        createToggleRow(innerFrame, "Auto Reload [PC]", 9, function(on) Shared.AutoReload = on if on then Load_AutoReload_S() end end)
-        createToggleRow(innerFrame, "Drag Shoot [PC]", 10, function(on) Shared.DragShoot = on if on then Load_DragShoot() end end)
-
-        local spacer = Instance.new("Frame")
-        spacer.BackgroundTransparency = 1
-        spacer.Size = UDim2.new(1, 0, 0, 10)
-        spacer.LayoutOrder = 99
-        spacer.Parent = innerFrame
-
+        ToggleAPIs.AutoArmor = createToggleRow(innerFrame, "Auto Armor [PC]", 2, function(on) Shared.AutoArmor = on if on then Load_AutoArmor() end end)
+        ToggleAPIs.StaffNotifier = createToggleRow(innerFrame, "Staff Notifier [PC]", 3, function(on) Shared.StaffNotifier = on if on then Load_StaffNotifier() end end)
+        ToggleAPIs.InstantStomp = createToggleRow(innerFrame, "Instant Stomp", 4, function(on) Shared.InstantStomp = on if on then Load_InstantStomp() end end)
+        ToggleAPIs.Desync = createToggleRow(innerFrame, "Desync", 5, function(on) Shared.Desync = on if on then Load_Desync() end end)
+        ToggleAPIs.DisableDesync = createToggleRow(innerFrame, "Disable Desync", 6, function(on) Shared.DisableDesync = on if on then Load_DisableDesync() end end)
+        ToggleAPIs.FpsBoost = createToggleRow(innerFrame, "Fps Boost", 7, function(on) Shared.FpsBoost = on if on then Load_FpsBoost() end end)
+        ToggleAPIs.PlayerPanel = createToggleRow(innerFrame, "Player Panel [PC]", 8, function(on) Shared.PlayerPanel = on if on then Load_PlayerPanel() end end)
+        ToggleAPIs.AutoReload = createToggleRow(innerFrame, "Auto Reload [PC]", 9, function(on) Shared.AutoReload = on if on then Load_AutoReload_S() end end)
+        ToggleAPIs.DragShoot = createToggleRow(innerFrame, "Drag Shoot [PC]", 10, function(on) Shared.DragShoot = on if on then Load_DragShoot() end end)
         return scroll
     end
 
     if name == "Aim" then
-        local silentApi, camApi
-        local fovBtn, qMethodBtn, statusLabel, methodContainer
-        local scriptsLoaded = {FOV = false, QMethod = false}
-        
-        local function shakeContainer()
-            if not methodContainer then return end
-            local originalPos = methodContainer.Position
+        local function shake(container)
+            if not container then return end
+            local originalPos = container.Position
             for i = 1, 6 do
                 task.delay(i * 0.04, function()
-                    if methodContainer and methodContainer.Parent then
-                        methodContainer.Position = UDim2.new(
-                            originalPos.X.Scale, 
-                            originalPos.X.Offset + (i % 2 == 0 and 6 or -6), 
-                            originalPos.Y.Scale, 
-                            originalPos.Y.Offset
-                        )
+                    if container and container.Parent then
+                        container.Position = UDim2.new(originalPos.X.Scale, originalPos.X.Offset + (i % 2 == 0 and 6 or -6), originalPos.Y.Scale, originalPos.Y.Offset)
                     end
                 end)
             end
-            task.delay(0.3, function()
-                if methodContainer and methodContainer.Parent then
-                    methodContainer.Position = originalPos
-                end
-            end)
+            task.delay(0.3, function() if container and container.Parent then container.Position = originalPos end end)
         end
-        
-        local function updateMethodUI()
-            if not fovBtn or not qMethodBtn or not statusLabel then return end
-            
+
+        ToggleAPIs.TriggerBot = createToggleRow(innerFrame, "Triggerbot", 1, function(on)
+            Shared.TriggerBot = on
+            if on then Load_TriggerBot() end
+            Shared.SaveConfig()
+        end)
+
+        aimPCContainer = Instance.new("Frame")
+        aimPCContainer.BackgroundTransparency = 1
+        aimPCContainer.Size = UDim2.new(1, 0, 0, 0)
+        aimPCContainer.AutomaticSize = Enum.AutomaticSize.Y
+        aimPCContainer.ZIndex = 4
+        aimPCContainer.LayoutOrder = 2
+        aimPCContainer.Parent = innerFrame
+
+        local listPC = Instance.new("UIListLayout", aimPCContainer)
+        listPC.FillDirection = Enum.FillDirection.Vertical
+        listPC.SortOrder = Enum.SortOrder.LayoutOrder
+        listPC.Padding = UDim.new(0, 6)
+
+        local silentApiPC, camApiPC
+        local methodContainerPC, statusLabelPC, fovBtnPC, qMethodBtnPC
+
+        local function updateMethodUI_PC()
+            if not statusLabelPC then return end
             if Shared.SilentAimMethod == "FOV" then
-                fovBtn.BackgroundColor3 = THEME.MethodActive
-                qMethodBtn.BackgroundColor3 = THEME.MethodNone
-                statusLabel.Text = "Method: FOV"
-                statusLabel.TextColor3 = THEME.MethodActive
+                if fovBtnPC then fovBtnPC.BackgroundColor3 = THEME.MethodActive end
+                if qMethodBtnPC then qMethodBtnPC.BackgroundColor3 = THEME.MethodNone end
+                statusLabelPC.Text = "Method: FOV"
+                statusLabelPC.TextColor3 = THEME.MethodActive
             elseif Shared.SilentAimMethod == "QMethod" then
-                fovBtn.BackgroundColor3 = THEME.MethodNone
-                qMethodBtn.BackgroundColor3 = THEME.MethodActive
-                statusLabel.Text = "Method: Q-Lock"
-                statusLabel.TextColor3 = THEME.MethodActive
+                if fovBtnPC then fovBtnPC.BackgroundColor3 = THEME.MethodNone end
+                if qMethodBtnPC then qMethodBtnPC.BackgroundColor3 = THEME.MethodActive end
+                statusLabelPC.Text = "Method: Q-Lock"
+                statusLabelPC.TextColor3 = THEME.MethodActive
             else
-                fovBtn.BackgroundColor3 = THEME.MethodNone
-                qMethodBtn.BackgroundColor3 = THEME.MethodNone
-                statusLabel.Text = "Select method first!"
-                statusLabel.TextColor3 = THEME.Warning
+                if fovBtnPC then fovBtnPC.BackgroundColor3 = THEME.MethodNone end
+                if qMethodBtnPC then qMethodBtnPC.BackgroundColor3 = THEME.MethodNone end
+                statusLabelPC.Text = "Select method first!"
+                statusLabelPC.TextColor3 = THEME.Warning
             end
         end
-        
-        -- Funktion um das richtige Script zu laden basierend auf Methode
-        local function loadCurrentMethod()
+
+        local function loadCurrentMethod_PC()
             if Shared.SilentAimMethod == "FOV" then
-                if not scriptsLoaded.FOV then
-                    scriptsLoaded.FOV = true
-                    Load_SilentAim_FOV()
-                end
+                Load_SilentAim_FOV()
             elseif Shared.SilentAimMethod == "QMethod" then
-                if not scriptsLoaded.QMethod then
-                    scriptsLoaded.QMethod = true
-                    Load_SilentAim_QMethod()
-                end
+                Load_SilentAim_QMethod()
             end
         end
-        
-        -- Silent Aim Toggle
-        silentApi = createToggleRow(innerFrame, "Silent Aim [PC]", 2, function(on)
+
+        silentApiPC = createToggleRow(aimPCContainer, "Silent Aim PC", 2, function(on)
+            Shared.SilentAim = on
             if on then
-                if not Shared.SilentAimMethod then
-                    silentApi.SetState(false)
+                if Shared.SilentAimMethod ~= "FOV" and Shared.SilentAimMethod ~= "QMethod" then
+                    silentApiPC.SetState(false)
+                    Shared.SilentAim = false
                     replaySound(errorSound)
-                    shakeContainer()
-                    return
-                end
-                
-                Shared.SilentAim = true
-                loadCurrentMethod()
-                
-                if camApi and camApi.GetState() then
-                    camApi.SetState(false)
-                    Shared.Camlock = false
+                    shake(methodContainerPC)
+                else
+                    Stop_SilentAim_Mobile()
+                    loadCurrentMethod_PC()
                 end
             else
-                Shared.SilentAim = false
+                Stop_SilentAim_Mobile()
             end
+            Shared.SaveConfig()
         end)
+        ToggleAPIs.SilentAimPC = silentApiPC
 
-        local spacerBefore = Instance.new("Frame")
-        spacerBefore.BackgroundTransparency = 1
-        spacerBefore.Size = UDim2.new(1, 0, 0, 8)
-        spacerBefore.LayoutOrder = 3
-        spacerBefore.Parent = innerFrame
+        local spacerPC1 = Instance.new("Frame")
+        spacerPC1.BackgroundTransparency = 1
+        spacerPC1.Size = UDim2.new(1, 0, 0, 4)
+        spacerPC1.LayoutOrder = 3
+        spacerPC1.Parent = aimPCContainer
 
-        methodContainer = Instance.new("Frame")
-        methodContainer.BackgroundColor3 = THEME.Card2
-        methodContainer.BorderSizePixel = 0
-        methodContainer.Size = UDim2.new(1, 0, 0, 70)
-        methodContainer.ZIndex = 4
-        methodContainer.LayoutOrder = 4
-        methodContainer.Parent = innerFrame
-        corner(methodContainer, 12)
-        stroke(methodContainer, THEME.Stroke1, 1.5, 0.2)
+        methodContainerPC = Instance.new("Frame")
+        methodContainerPC.BackgroundColor3 = THEME.Card2
+        methodContainerPC.BorderSizePixel = 0
+        methodContainerPC.Size = UDim2.new(1, 0, 0, 70)
+        methodContainerPC.ZIndex = 4
+        methodContainerPC.LayoutOrder = 4
+        methodContainerPC.Parent = aimPCContainer
+        corner(methodContainerPC, 12)
+        stroke(methodContainerPC, THEME.Stroke1, 1.5, 0.2)
+        registerRowForAnimation(methodContainerPC)
 
-        local titleLabel = Instance.new("TextLabel")
-        titleLabel.BackgroundTransparency = 1
-        titleLabel.Position = UDim2.new(0, 12, 0, 8)
-        titleLabel.Size = UDim2.new(0.5, -12, 0, 18)
-        titleLabel.Font = Enum.Font.GothamBold
-        titleLabel.Text = "Silent Aim Method"
-        titleLabel.TextColor3 = THEME.Text
-        titleLabel.TextSize = 13
-        titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-        titleLabel.ZIndex = 5
-        titleLabel.Parent = methodContainer
+        local titleLabelPC = Instance.new("TextLabel")
+        titleLabelPC.BackgroundTransparency = 1
+        titleLabelPC.Position = UDim2.new(0, 12, 0, 8)
+        titleLabelPC.Size = UDim2.new(0.5, -12, 0, 18)
+        titleLabelPC.Font = Enum.Font.GothamBold
+        titleLabelPC.Text = "Silent Aim Method"
+        titleLabelPC.TextColor3 = THEME.Text
+        titleLabelPC.TextSize = 13
+        titleLabelPC.TextXAlignment = Enum.TextXAlignment.Left
+        titleLabelPC.ZIndex = 5
+        titleLabelPC.Parent = methodContainerPC
 
-        statusLabel = Instance.new("TextLabel")
-        statusLabel.BackgroundTransparency = 1
-        statusLabel.Position = UDim2.new(0.5, 0, 0, 8)
-        statusLabel.Size = UDim2.new(0.5, -12, 0, 18)
-        statusLabel.Font = Enum.Font.GothamSemibold
-        statusLabel.Text = "Select method first!"
-        statusLabel.TextColor3 = THEME.Warning
-        statusLabel.TextSize = 11
-        statusLabel.TextXAlignment = Enum.TextXAlignment.Right
-        statusLabel.ZIndex = 5
-        statusLabel.Parent = methodContainer
+        statusLabelPC = Instance.new("TextLabel")
+        statusLabelPC.BackgroundTransparency = 1
+        statusLabelPC.Position = UDim2.new(0.5, 0, 0, 8)
+        statusLabelPC.Size = UDim2.new(0.5, -12, 0, 18)
+        statusLabelPC.Font = Enum.Font.GothamSemibold
+        statusLabelPC.Text = "Select method first!"
+        statusLabelPC.TextColor3 = THEME.Warning
+        statusLabelPC.TextSize = 11
+        statusLabelPC.TextXAlignment = Enum.TextXAlignment.Right
+        statusLabelPC.ZIndex = 5
+        statusLabelPC.Parent = methodContainerPC
 
-        local btnContainer = Instance.new("Frame")
-        btnContainer.BackgroundTransparency = 1
-        btnContainer.Position = UDim2.new(0, 10, 0, 34)
-        btnContainer.Size = UDim2.new(1, -20, 0, 28)
-        btnContainer.ZIndex = 5
-        btnContainer.Parent = methodContainer
+        local btnContainerPC = Instance.new("Frame")
+        btnContainerPC.BackgroundTransparency = 1
+        btnContainerPC.Position = UDim2.new(0, 10, 0, 34)
+        btnContainerPC.Size = UDim2.new(1, -20, 0, 28)
+        btnContainerPC.ZIndex = 5
+        btnContainerPC.Parent = methodContainerPC
 
-        local btnLayout = Instance.new("UIListLayout", btnContainer)
-        btnLayout.FillDirection = Enum.FillDirection.Horizontal
-        btnLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        btnLayout.Padding = UDim.new(0, 10)
-        btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        local btnLayoutPC = Instance.new("UIListLayout", btnContainerPC)
+        btnLayoutPC.FillDirection = Enum.FillDirection.Horizontal
+        btnLayoutPC.SortOrder = Enum.SortOrder.LayoutOrder
+        btnLayoutPC.Padding = UDim.new(0, 10)
+        btnLayoutPC.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-        fovBtn = Instance.new("TextButton")
-        fovBtn.BackgroundColor3 = THEME.MethodNone
-        fovBtn.Size = UDim2.new(0.45, 0, 1, 0)
-        fovBtn.Text = "FOV Method"
-        fovBtn.Font = Enum.Font.GothamBold
-        fovBtn.TextColor3 = THEME.Text
-        fovBtn.TextSize = 12
-        fovBtn.ZIndex = 6
-        fovBtn.LayoutOrder = 1
-        fovBtn.Parent = btnContainer
-        corner(fovBtn, 8)
-        addButtonSounds(fovBtn)
-
-        fovBtn.MouseButton1Click:Connect(function()
-            -- Setze Methode auf FOV
+        fovBtnPC = Instance.new("TextButton")
+        fovBtnPC.BackgroundColor3 = THEME.MethodNone
+        fovBtnPC.Size = UDim2.new(0.45, 0, 1, 0)
+        fovBtnPC.Text = "FOV Method"
+        fovBtnPC.Font = Enum.Font.GothamBold
+        fovBtnPC.TextColor3 = THEME.Text
+        fovBtnPC.TextSize = 12
+        fovBtnPC.ZIndex = 6
+        fovBtnPC.LayoutOrder = 1
+        fovBtnPC.Parent = btnContainerPC
+        corner(fovBtnPC, 8)
+        addButtonSounds(fovBtnPC)
+        fovBtnPC.MouseButton1Click:Connect(function()
             Shared.SilentAimMethod = "FOV"
-            updateMethodUI()
-            
-            -- NUR laden wenn Silent Aim AN ist
+            updateMethodUI_PC()
             if Shared.SilentAim then
-                loadCurrentMethod()
+                Stop_SilentAim_Mobile()
+                Load_SilentAim_FOV()
             end
+            Shared.SaveConfig()
         end)
 
-        qMethodBtn = Instance.new("TextButton")
-        qMethodBtn.BackgroundColor3 = THEME.MethodNone
-        qMethodBtn.Size = UDim2.new(0.45, 0, 1, 0)
-        qMethodBtn.Text = "Q Method"
-        qMethodBtn.Font = Enum.Font.GothamBold
-        qMethodBtn.TextColor3 = THEME.Text
-        qMethodBtn.TextSize = 12
-        qMethodBtn.ZIndex = 6
-        qMethodBtn.LayoutOrder = 2
-        qMethodBtn.Parent = btnContainer
-        corner(qMethodBtn, 8)
-        addButtonSounds(qMethodBtn)
-
-        qMethodBtn.MouseButton1Click:Connect(function()
-            -- Setze Methode auf QMethod
+        qMethodBtnPC = Instance.new("TextButton")
+        qMethodBtnPC.BackgroundColor3 = THEME.MethodNone
+        qMethodBtnPC.Size = UDim2.new(0.45, 0, 1, 0)
+        qMethodBtnPC.Text = "Q Method"
+        qMethodBtnPC.Font = Enum.Font.GothamBold
+        qMethodBtnPC.TextColor3 = THEME.Text
+        qMethodBtnPC.TextSize = 12
+        qMethodBtnPC.ZIndex = 6
+        qMethodBtnPC.LayoutOrder = 2
+        qMethodBtnPC.Parent = btnContainerPC
+        corner(qMethodBtnPC, 8)
+        addButtonSounds(qMethodBtnPC)
+        qMethodBtnPC.MouseButton1Click:Connect(function()
             Shared.SilentAimMethod = "QMethod"
-            updateMethodUI()
-            
-            -- NUR laden wenn Silent Aim AN ist
+            updateMethodUI_PC()
             if Shared.SilentAim then
-                loadCurrentMethod()
+                Stop_SilentAim_Mobile()
+                Load_SilentAim_QMethod()
             end
+            Shared.SaveConfig()
         end)
 
-        registerRowForAnimation(methodContainer)
-        updateMethodUI()
+        updateMethodUI_PC()
 
-        local spacerAfter = Instance.new("Frame")
-        spacerAfter.BackgroundTransparency = 1
-        spacerAfter.Size = UDim2.new(1, 0, 0, 8)
-        spacerAfter.LayoutOrder = 5
-        spacerAfter.Parent = innerFrame
-
-        createToggleRow(innerFrame, "TriggerBot [PC]", 6, function(on) Shared.TriggerBot = on if on then Load_TriggerBot() end end)
-
-        camApi = createToggleRow(innerFrame, "Camlock [PC]", 7, function(on)
+        camApiPC = createToggleRow(aimPCContainer, "Camlock PC", 7, function(on)
             Shared.Camlock = on
             if on then
                 Load_Camlock()
-                if silentApi and silentApi.GetState() then
-                    silentApi.SetState(false)
+            else
+                Stop_Camlock_PC()
+            end
+            Shared.SaveConfig()
+        end)
+        ToggleAPIs.CamlockPC = camApiPC
+
+        aimMobileContainer = Instance.new("Frame")
+        aimMobileContainer.BackgroundTransparency = 1
+        aimMobileContainer.Size = UDim2.new(1, 0, 0, 0)
+        aimMobileContainer.AutomaticSize = Enum.AutomaticSize.Y
+        aimMobileContainer.ZIndex = 4
+        aimMobileContainer.LayoutOrder = 2
+        aimMobileContainer.Parent = innerFrame
+
+        local listM = Instance.new("UIListLayout", aimMobileContainer)
+        listM.FillDirection = Enum.FillDirection.Vertical
+        listM.SortOrder = Enum.SortOrder.LayoutOrder
+        listM.Padding = UDim.new(0, 6)
+
+        local silentApiMobile, camApiMobile
+        local methodContainerMobile, statusLabelMobile, fovBtnMobile, toggleBtnMobile
+
+        local function updateMethodUI_Mobile()
+            if not statusLabelMobile then return end
+            if Shared.SilentAimMethod == "MobileMethod" then
+                if fovBtnMobile then fovBtnMobile.BackgroundColor3 = THEME.MethodNone end
+                if toggleBtnMobile then toggleBtnMobile.BackgroundColor3 = THEME.MethodActive end
+                statusLabelMobile.Text = "Method: Toggle Button"
+                statusLabelMobile.TextColor3 = THEME.MethodActive
+            elseif Shared.SilentAimMethod == "FOV" then
+                if fovBtnMobile then fovBtnMobile.BackgroundColor3 = THEME.MethodActive end
+                if toggleBtnMobile then toggleBtnMobile.BackgroundColor3 = THEME.MethodNone end
+                statusLabelMobile.Text = "Method: FOV"
+                statusLabelMobile.TextColor3 = THEME.MethodActive
+            else
+                if fovBtnMobile then fovBtnMobile.BackgroundColor3 = THEME.MethodNone end
+                if toggleBtnMobile then toggleBtnMobile.BackgroundColor3 = THEME.MethodNone end
+                statusLabelMobile.Text = "Select method first!"
+                statusLabelMobile.TextColor3 = THEME.Warning
+            end
+        end
+
+        local function loadCurrentMethod_Mobile()
+            if Shared.SilentAimMethod == "MobileMethod" then
+                Load_SilentAim_Mobile_Remote()
+            elseif Shared.SilentAimMethod == "FOV" then
+                Load_SilentAim_FOV()
+            end
+        end
+
+        silentApiMobile = createToggleRow(aimMobileContainer, "Silent Aim Mobile", 2, function(on)
+            Shared.SilentAim = on
+            if on then
+                if Shared.SilentAimMethod ~= "MobileMethod" and Shared.SilentAimMethod ~= "FOV" then
+                    silentApiMobile.SetState(false)
                     Shared.SilentAim = false
+                    replaySound(errorSound)
+                    shake(methodContainerMobile)
+                else
+                    loadCurrentMethod_Mobile()
+                end
+            else
+                if Shared.SilentAimMethod == "MobileMethod" then
+                    Stop_SilentAim_Mobile()
                 end
             end
+            Shared.SaveConfig()
+        end)
+        ToggleAPIs.SilentAimMobile = silentApiMobile
+
+        local spacerM1 = Instance.new("Frame")
+        spacerM1.BackgroundTransparency = 1
+        spacerM1.Size = UDim2.new(1, 0, 0, 4)
+        spacerM1.LayoutOrder = 3
+        spacerM1.Parent = aimMobileContainer
+
+        methodContainerMobile = Instance.new("Frame")
+        methodContainerMobile.BackgroundColor3 = THEME.Card2
+        methodContainerMobile.BorderSizePixel = 0
+        methodContainerMobile.Size = UDim2.new(1, 0, 0, 70)
+        methodContainerMobile.ZIndex = 4
+        methodContainerMobile.LayoutOrder = 4
+        methodContainerMobile.Parent = aimMobileContainer
+        corner(methodContainerMobile, 12)
+        stroke(methodContainerMobile, THEME.Stroke1, 1.5, 0.2)
+        registerRowForAnimation(methodContainerMobile)
+
+        local titleLabelM = Instance.new("TextLabel")
+        titleLabelM.BackgroundTransparency = 1
+        titleLabelM.Position = UDim2.new(0, 12, 0, 8)
+        titleLabelM.Size = UDim2.new(0.5, -12, 0, 18)
+        titleLabelM.Font = Enum.Font.GothamBold
+        titleLabelM.Text = "Silent Aim Method"
+        titleLabelM.TextColor3 = THEME.Text
+        titleLabelM.TextSize = 13
+        titleLabelM.TextXAlignment = Enum.TextXAlignment.Left
+        titleLabelM.ZIndex = 5
+        titleLabelM.Parent = methodContainerMobile
+
+        statusLabelMobile = Instance.new("TextLabel")
+        statusLabelMobile.BackgroundTransparency = 1
+        statusLabelMobile.Position = UDim2.new(0.5, 0, 0, 8)
+        statusLabelMobile.Size = UDim2.new(0.5, -12, 0, 18)
+        statusLabelMobile.Font = Enum.Font.GothamSemibold
+        statusLabelMobile.Text = "Select method first!"
+        statusLabelMobile.TextColor3 = THEME.Warning
+        statusLabelMobile.TextSize = 11
+        statusLabelMobile.TextXAlignment = Enum.TextXAlignment.Right
+        statusLabelMobile.ZIndex = 5
+        statusLabelMobile.Parent = methodContainerMobile
+
+        local btnContainerM = Instance.new("Frame")
+        btnContainerM.BackgroundTransparency = 1
+        btnContainerM.Position = UDim2.new(0, 10, 0, 34)
+        btnContainerM.Size = UDim2.new(1, -20, 0, 28)
+        btnContainerM.ZIndex = 5
+        btnContainerM.Parent = methodContainerMobile
+
+        local btnLayoutM = Instance.new("UIListLayout", btnContainerM)
+        btnLayoutM.FillDirection = Enum.FillDirection.Horizontal
+        btnLayoutM.SortOrder = Enum.SortOrder.LayoutOrder
+        btnLayoutM.Padding = UDim.new(0, 10)
+        btnLayoutM.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+        fovBtnMobile = Instance.new("TextButton")
+        fovBtnMobile.BackgroundColor3 = THEME.MethodNone
+        fovBtnMobile.Size = UDim2.new(0.45, 0, 1, 0)
+        fovBtnMobile.Text = "FOV Method"
+        fovBtnMobile.Font = Enum.Font.GothamBold
+        fovBtnMobile.TextColor3 = THEME.Text
+        fovBtnMobile.TextSize = 12
+        fovBtnMobile.ZIndex = 6
+        fovBtnMobile.LayoutOrder = 1
+        fovBtnMobile.Parent = btnContainerM
+        corner(fovBtnMobile, 8)
+        addButtonSounds(fovBtnMobile)
+        fovBtnMobile.MouseButton1Click:Connect(function()
+            Shared.SilentAimMethod = "FOV"
+            updateMethodUI_Mobile()
+            if Shared.SilentAim then
+                Stop_SilentAim_Mobile()
+                Load_SilentAim_FOV()
+            end
+            Shared.SaveConfig()
         end)
 
-        local spacer = Instance.new("Frame")
-        spacer.BackgroundTransparency = 1
-        spacer.Size = UDim2.new(1, 0, 0, 10)
-        spacer.LayoutOrder = 99
-        spacer.Parent = innerFrame
+        toggleBtnMobile = Instance.new("TextButton")
+        toggleBtnMobile.BackgroundColor3 = THEME.MethodNone
+        toggleBtnMobile.Size = UDim2.new(0.45, 0, 1, 0)
+        toggleBtnMobile.Text = "Toggle Button Method"
+        toggleBtnMobile.Font = Enum.Font.GothamBold
+        toggleBtnMobile.TextColor3 = THEME.Text
+        toggleBtnMobile.TextSize = 12
+        toggleBtnMobile.ZIndex = 6
+        toggleBtnMobile.LayoutOrder = 2
+        toggleBtnMobile.Parent = btnContainerM
+        corner(toggleBtnMobile, 8)
+        addButtonSounds(toggleBtnMobile)
+        toggleBtnMobile.MouseButton1Click:Connect(function()
+            Shared.SilentAimMethod = "MobileMethod"
+            updateMethodUI_Mobile()
+            if Shared.SilentAim then
+                Stop_SilentAim_Mobile()
+                Load_SilentAim_Mobile_Remote()
+            end
+            Shared.SaveConfig()
+        end)
 
+        updateMethodUI_Mobile()
+
+        camApiMobile = createToggleRow(aimMobileContainer, "Camlock Mobile", 7, function(on)
+            Shared.Camlock = on
+            if on then
+                Load_Camlock_Mobile()
+            else
+                Stop_Camlock_Mobile()
+            end
+            Shared.SaveConfig()
+        end)
+        ToggleAPIs.CamlockMobile = camApiMobile
+
+        RefreshAimPlatform = function()
+            if aimPCContainer and aimMobileContainer then
+                aimPCContainer.Visible = (Shared.Platform ~= "Mobile")
+                aimMobileContainer.Visible = (Shared.Platform == "Mobile")
+            end
+            updateMethodUI_PC()
+            updateMethodUI_Mobile()
+        end
+
+        RefreshAimPlatform()
         return scroll
     end
 
     if name == "Target" then
         local searchBoxTarget, statusLabel, avatarInner, nameBig, nameSmall
-
         local function trunc(str, max) if not str then return "" end if #str <= max then return str end return string.sub(str, 1, max - 3) .. "..." end
-
         local function findPlayer(query)
             if not query or query == "" then return nil end
             query = string.lower(query)
@@ -769,7 +1270,6 @@ local function createTabFrame(name)
             end
             return best
         end
-
         local function setTarget(plr)
             if not plr then
                 Shared.TargetUsername = nil
@@ -792,7 +1292,6 @@ local function createTabFrame(name)
                 if ok2 and img2 then avatarInner.Image = img2 end
             end
         end
-
         local controlsRow = Instance.new("Frame")
         controlsRow.BackgroundColor3 = THEME.Card
         controlsRow.Size = UDim2.new(1, 0, 0, 36)
@@ -802,14 +1301,12 @@ local function createTabFrame(name)
         corner(controlsRow, 10)
         stroke(controlsRow, THEME.Stroke2, 1, 0.35)
         registerRowForAnimation(controlsRow)
-
         local controlsLayout = Instance.new("UIListLayout", controlsRow)
         controlsLayout.FillDirection = Enum.FillDirection.Horizontal
         controlsLayout.SortOrder = Enum.SortOrder.LayoutOrder
         controlsLayout.Padding = UDim.new(0, 4)
         controlsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
         padding(controlsRow, 6, 6, 0, 0)
-
         local gotoBtn = Instance.new("TextButton")
         gotoBtn.BackgroundColor3 = THEME.Card2
         gotoBtn.Size = UDim2.new(0, 50, 0, 26)
@@ -822,9 +1319,7 @@ local function createTabFrame(name)
         gotoBtn.Parent = controlsRow
         corner(gotoBtn, 6)
         addButtonSounds(gotoBtn)
-
         gotoBtn.MouseButton1Click:Connect(function() Shared.GotoTarget = true Load_Target() end)
-
         local function miniToggle(parent, txt, ord, cb)
             local btn = Instance.new("TextButton")
             btn.BackgroundColor3 = THEME.ToggleOff
@@ -839,19 +1334,26 @@ local function createTabFrame(name)
             corner(btn, 6)
             addButtonSounds(btn)
             local state = false
+            local function refresh() btn.BackgroundColor3 = state and THEME.ToggleOn or THEME.ToggleOff end
+            local api = {}
+            function api.SetState(v) state = v and true or false refresh() end
+            function api.GetState() return state end
             btn.MouseButton1Click:Connect(function()
                 state = not state
-                btn.BackgroundColor3 = state and THEME.ToggleOn or THEME.ToggleOff
+                refresh()
                 if cb then task.spawn(function() cb(state) end) end
+                Shared.SaveConfig()
             end)
-            return btn
+            return api
         end
-
-        miniToggle(controlsRow, "View", 2, function(on) Shared.ViewTarget = on Load_Target() end)
-        miniToggle(controlsRow, "HL", 3, function(on) Shared.HighlightTarget = on Load_Target() end)
-        miniToggle(controlsRow, "Katana", 4, function(on) Shared.AutoKatanaKill = on Load_Target() end)
-        miniToggle(controlsRow, "Fling", 5, function(on) Shared.Fling = on Load_Target() end)
-
+        local viewApi = miniToggle(controlsRow, "View", 2, function(on) Shared.ViewTarget = on Load_Target() end)
+        local hlApi = miniToggle(controlsRow, "HL", 3, function(on) Shared.HighlightTarget = on Load_Target() end)
+        local katApi = miniToggle(controlsRow, "Katana", 4, function(on) Shared.AutoKatanaKill = on Load_Target() end)
+        local flingApi = miniToggle(controlsRow, "Fling", 5, function(on) Shared.Fling = on Load_Target() end)
+        ToggleAPIs.ViewTarget = viewApi
+        ToggleAPIs.HighlightTarget = hlApi
+        ToggleAPIs.AutoKatanaKill = katApi
+        ToggleAPIs.Fling = flingApi
         local searchRow = Instance.new("Frame")
         searchRow.BackgroundColor3 = THEME.Card
         searchRow.Size = UDim2.new(1, 0, 0, 34)
@@ -861,7 +1363,6 @@ local function createTabFrame(name)
         corner(searchRow, 10)
         stroke(searchRow, THEME.Stroke2, 1, 0.35)
         registerRowForAnimation(searchRow)
-
         searchBoxTarget = Instance.new("TextBox")
         searchBoxTarget.BackgroundTransparency = 1
         searchBoxTarget.Position = UDim2.new(0, 10, 0, 0)
@@ -875,7 +1376,6 @@ local function createTabFrame(name)
         searchBoxTarget.ClearTextOnFocus = false
         searchBoxTarget.ZIndex = 5
         searchBoxTarget.Parent = searchRow
-
         local searchGo = Instance.new("TextButton")
         searchGo.BackgroundColor3 = THEME.Card2
         searchGo.AnchorPoint = Vector2.new(1, 0.5)
@@ -889,7 +1389,6 @@ local function createTabFrame(name)
         searchGo.Parent = searchRow
         corner(searchGo, 6)
         addButtonSounds(searchGo)
-
         local avatarCard = Instance.new("Frame")
         avatarCard.BackgroundColor3 = THEME.Card
         avatarCard.Size = UDim2.new(1, 0, 0, 56)
@@ -899,7 +1398,6 @@ local function createTabFrame(name)
         corner(avatarCard, 10)
         stroke(avatarCard, THEME.Stroke2, 1, 0.35)
         registerRowForAnimation(avatarCard)
-
         avatarInner = Instance.new("ImageLabel")
         avatarInner.BackgroundColor3 = THEME.BgMain
         avatarInner.Size = UDim2.new(0, 44, 0, 44)
@@ -908,7 +1406,6 @@ local function createTabFrame(name)
         avatarInner.ZIndex = 5
         avatarInner.Parent = avatarCard
         corner(avatarInner, 999)
-
         nameBig = Instance.new("TextLabel")
         nameBig.BackgroundTransparency = 1
         nameBig.Position = UDim2.new(0, 58, 0.5, -14)
@@ -920,7 +1417,6 @@ local function createTabFrame(name)
         nameBig.ZIndex = 5
         nameBig.Text = "No Target"
         nameBig.Parent = avatarCard
-
         nameSmall = Instance.new("TextLabel")
         nameSmall.BackgroundTransparency = 1
         nameSmall.Position = UDim2.new(0, 58, 0.5, 4)
@@ -932,7 +1428,6 @@ local function createTabFrame(name)
         nameSmall.ZIndex = 5
         nameSmall.Text = "@none"
         nameSmall.Parent = avatarCard
-
         statusLabel = Instance.new("TextLabel")
         statusLabel.BackgroundTransparency = 1
         statusLabel.Size = UDim2.new(1, 0, 0, 18)
@@ -945,7 +1440,6 @@ local function createTabFrame(name)
         statusLabel.Text = "No target"
         statusLabel.Parent = innerFrame
         registerRowForAnimation(statusLabel)
-
         local copyRow = Instance.new("Frame")
         copyRow.BackgroundTransparency = 1
         copyRow.Size = UDim2.new(1, 0, 0, 28)
@@ -953,14 +1447,11 @@ local function createTabFrame(name)
         copyRow.LayoutOrder = 6
         copyRow.Parent = innerFrame
         registerRowForAnimation(copyRow)
-
         local copyLayout = Instance.new("UIListLayout", copyRow)
         copyLayout.FillDirection = Enum.FillDirection.Horizontal
         copyLayout.SortOrder = Enum.SortOrder.LayoutOrder
         copyLayout.Padding = UDim.new(0, 6)
-
         local function safeClipboard(text) if typeof(setclipboard) == "function" then pcall(setclipboard, text) end end
-
         local copyUser = Instance.new("TextButton")
         copyUser.BackgroundColor3 = THEME.Card2
         copyUser.Size = UDim2.new(0.48, 0, 1, 0)
@@ -973,10 +1464,7 @@ local function createTabFrame(name)
         copyUser.Parent = copyRow
         corner(copyUser, 6)
         addButtonSounds(copyUser)
-        copyUser.MouseButton1Click:Connect(function()
-            if Shared.TargetUsername then safeClipboard(Shared.TargetUsername) statusLabel.Text = "Copied!" end
-        end)
-
+        copyUser.MouseButton1Click:Connect(function() if Shared.TargetUsername then safeClipboard(Shared.TargetUsername) statusLabel.Text = "Copied!" end end)
         local copyDisp = Instance.new("TextButton")
         copyDisp.BackgroundColor3 = THEME.Card2
         copyDisp.Size = UDim2.new(0.48, 0, 1, 0)
@@ -989,26 +1477,10 @@ local function createTabFrame(name)
         copyDisp.Parent = copyRow
         corner(copyDisp, 6)
         addButtonSounds(copyDisp)
-        copyDisp.MouseButton1Click:Connect(function()
-            local plr = Players:FindFirstChild(Shared.TargetUsername or "")
-            if plr then safeClipboard(plr.DisplayName or plr.Name) statusLabel.Text = "Copied!" end
-        end)
-
-        local spacer = Instance.new("Frame")
-        spacer.BackgroundTransparency = 1
-        spacer.Size = UDim2.new(1, 0, 0, 10)
-        spacer.LayoutOrder = 99
-        spacer.Parent = innerFrame
-
-        local function performSearch()
-            local txt = searchBoxTarget.Text
-            local plr = findPlayer(txt)
-            if plr then setTarget(plr) else statusLabel.Text = "Not found: " .. txt end
-        end
-
+        copyDisp.MouseButton1Click:Connect(function() local plr = Players:FindFirstChild(Shared.TargetUsername or "") if plr then safeClipboard(plr.DisplayName or plr.Name) statusLabel.Text = "Copied!" end end)
+        local function performSearch() local txt = searchBoxTarget.Text local plr = findPlayer(txt) if plr then setTarget(plr) else statusLabel.Text = "Not found: " .. txt end end
         searchGo.MouseButton1Click:Connect(performSearch)
         searchBoxTarget.FocusLost:Connect(function(enter) if enter then performSearch() end end)
-
         setTarget(nil)
         return scroll
     end
@@ -1031,20 +1503,9 @@ local function createTabFrame(name)
         stroke(infoText, THEME.Stroke2, 1, 0.35)
         padding(infoText, 10, 10, 10, 10)
         registerRowForAnimation(infoText)
-
-        createActionButton(innerFrame, "Copy Discord Link", 3, function()
-            if typeof(setclipboard) == "function" then pcall(setclipboard, DISCORD_INVITE) end
-        end)
-
-        local spacer = Instance.new("Frame")
-        spacer.BackgroundTransparency = 1
-        spacer.Size = UDim2.new(1, 0, 0, 10)
-        spacer.LayoutOrder = 99
-        spacer.Parent = innerFrame
-
+        createActionButton(innerFrame, "Copy Discord Link", 3, function() if typeof(setclipboard) == "function" then pcall(setclipboard, DISCORD_INVITE) end end)
         return scroll
     end
-
     return scroll
 end
 
@@ -1083,95 +1544,77 @@ do
         main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
     topBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = main.Position
-            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true dragStart = input.Position startPos = main.Position input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end
     end)
-    topBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
-    end)
+    topBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
     UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
 end
 
 local minimized = false
-miniBtn.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    if minimized then
-        inner.Visible = false
-        main.Size = UDim2.new(NORMAL_SIZE.X.Scale, NORMAL_SIZE.X.Offset, 0, 74)
-    else
-        inner.Visible = true
-        main.Size = NORMAL_SIZE
-    end
-end)
-
+miniBtn.MouseButton1Click:Connect(function() minimized = not minimized if minimized then inner.Visible = false main.Size = UDim2.new(NORMAL_SIZE.X.Scale, NORMAL_SIZE.X.Offset, 0, 74) else inner.Visible = true main.Size = NORMAL_SIZE end end)
 closeBtn.MouseButton1Click:Connect(function() DisableAllScripts() gui:Destroy() end)
+
+task.defer(function()
+    if ToggleAPIs.AutoArmor then ToggleAPIs.AutoArmor.SetState(Shared.AutoArmor) end
+    if ToggleAPIs.StaffNotifier then ToggleAPIs.StaffNotifier.SetState(Shared.StaffNotifier) end
+    if ToggleAPIs.InstantStomp then ToggleAPIs.InstantStomp.SetState(Shared.InstantStomp) end
+    if ToggleAPIs.Desync then ToggleAPIs.Desync.SetState(Shared.Desync) end
+    if ToggleAPIs.DisableDesync then ToggleAPIs.DisableDesync.SetState(Shared.DisableDesync) end
+    if ToggleAPIs.FpsBoost then ToggleAPIs.FpsBoost.SetState(Shared.FpsBoost) end
+    if ToggleAPIs.PlayerPanel then ToggleAPIs.PlayerPanel.SetState(Shared.PlayerPanel) end
+    if ToggleAPIs.AutoReload then ToggleAPIs.AutoReload.SetState(Shared.AutoReload) end
+    if ToggleAPIs.DragShoot then ToggleAPIs.DragShoot.SetState(Shared.DragShoot) end
+    if ToggleAPIs.TriggerBot then ToggleAPIs.TriggerBot.SetState(Shared.TriggerBot) end
+    if ToggleAPIs.CamlockPC then ToggleAPIs.CamlockPC.SetState(Shared.Camlock and Shared.Platform ~= "Mobile") end
+    if ToggleAPIs.CamlockMobile then ToggleAPIs.CamlockMobile.SetState(Shared.Camlock and Shared.Platform == "Mobile") end
+    if ToggleAPIs.SilentAimPC then ToggleAPIs.SilentAimPC.SetState(Shared.SilentAim and (Shared.Platform ~= "Mobile")) end
+    if ToggleAPIs.SilentAimMobile then ToggleAPIs.SilentAimMobile.SetState(Shared.SilentAim and (Shared.Platform == "Mobile")) end
+
+    if Shared.AutoArmor then Load_AutoArmor() end
+    if Shared.StaffNotifier then Load_StaffNotifier() end
+    if Shared.InstantStomp then Load_InstantStomp() end
+    if Shared.Desync then Load_Desync() end
+    if Shared.DisableDesync then Load_DisableDesync() end
+    if Shared.FpsBoost then Load_FpsBoost() end
+    if Shared.PlayerPanel then Load_PlayerPanel() end
+    if Shared.AutoReload then Load_AutoReload_S() end
+    if Shared.DragShoot then Load_DragShoot() end
+    if Shared.TriggerBot then Load_TriggerBot() end
+    if Shared.Camlock then if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end end
+    if Shared.SilentAim then
+        if not Shared.SilentAimMethod then
+            Shared.SilentAimMethod = (Shared.Platform == "Mobile") and "MobileMethod" or "FOV"
+        end
+        Load_SilentAim_ByMethod()
+    else
+        Stop_SilentAim_Mobile()
+    end
+    RefreshAimPlatform()
+end)
 
 task.spawn(function()
     while not getgenv().SchmecktIntroFinished do task.wait() end
-
     local openSound = Instance.new("Sound")
     openSound.SoundId = GUI_OPEN_SOUND
     openSound.Volume = 2
     openSound.Parent = SoundService
     openSound:Play()
     task.delay(3, function() openSound:Destroy() end)
-
-    for _, frame in pairs(tabFrames) do
-        frame.CanvasPosition = Vector2.new(0, 0)
-    end
-
     main.Size = UDim2.new(0, 0, 0, 0)
     main.Visible = true
-    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = NORMAL_SIZE
-    }):Play()
-
+    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = NORMAL_SIZE}):Play()
     task.wait(0.5)
-
     for i, row in ipairs(allRows) do
         task.delay(i * 0.04, function()
             if not row or not row.Parent then return end
-            if row:IsA("Frame") then
-                TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    BackgroundTransparency = 0
-                }):Play()
-            elseif row:IsA("TextButton") then
-                TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    BackgroundTransparency = 0,
-                    TextTransparency = 0
-                }):Play()
-            elseif row:IsA("TextLabel") then
-                TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                    TextTransparency = 0
-                }):Play()
-            end
-
+            if row:IsA("Frame") then TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
+            elseif row:IsA("TextButton") then TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+            elseif row:IsA("TextLabel") then TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play() end
             for _, child in ipairs(row:GetDescendants()) do
-                if child:IsA("TextLabel") then
-                    TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        TextTransparency = 0
-                    }):Play()
-                elseif child:IsA("TextButton") then
-                    TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        BackgroundTransparency = 0,
-                        TextTransparency = 0
-                    }):Play()
-                elseif child:IsA("ImageLabel") then
-                    TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        ImageTransparency = 0
-                    }):Play()
-                end
+                if child:IsA("TextLabel") then TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
+                elseif child:IsA("TextButton") then TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
+                elseif child:IsA("ImageLabel") then TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play() end
             end
         end)
     end
-
-    task.delay(#allRows * 0.04 + 0.3, function()
-        for _, frame in pairs(tabFrames) do
-            frame.CanvasPosition = Vector2.new(0, 0)
-        end
-    end)
 end)
