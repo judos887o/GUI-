@@ -34,6 +34,8 @@ Shared.HighlightTarget = Shared.HighlightTarget or false
 Shared.ViewTarget = Shared.ViewTarget or false
 Shared.GotoTarget = Shared.GotoTarget or false
 Shared.InstantStomp = Shared.InstantStomp or false
+Shared.OPKill = Shared.OPKill or false
+Shared.Aura = Shared.Aura or false
 Shared.Platform = Shared.Platform or "PC"
 
 Shared.Connections = Shared.Connections or {}
@@ -63,6 +65,8 @@ local function serializeConfig()
             HighlightTarget = Shared.HighlightTarget,
             ViewTarget = Shared.ViewTarget,
             InstantStomp = Shared.InstantStomp,
+            OPKill = Shared.OPKill,
+            Aura = Shared.Aura,
         }
     }
 end
@@ -181,6 +185,8 @@ local function DisableAllScripts()
     Shared.ViewTarget = false
     Shared.GotoTarget = false
     Shared.InstantStomp = false
+    Shared.OPKill = false
+    Shared.Aura = false
     
     Stop_InstantStomp()
     Stop_SilentAim_Mobile()
@@ -251,7 +257,7 @@ local function MainUI()
     Title.Size = scaleUDim(250, 20)
     Title.Position = UDim2.new(0, 58 * SCALE, 0, 8 * SCALE)
     Title.BackgroundTransparency = 1
-    Title.Text = "Shadowpepper Hub"
+    Title.Text = "Schmeckt + Shadowpepper"
     Title.Font = Enum.Font.GothamBlack
     Title.TextSize = scaleSize(16)
     Title.TextColor3 = Theme.Accent
@@ -591,6 +597,9 @@ local function MainUI()
     CreateSwitch("Highlight", Shared.HighlightTarget, function(s) Shared.HighlightTarget = s Load_Target() end)
     CreateSwitch("Auto Katana", Shared.AutoKatanaKill, function(s) Shared.AutoKatanaKill = s Load_Target() end)
     CreateSwitch("Fling Target", Shared.Fling, function(s) Shared.Fling = s Load_Target() end)
+    CreateSwitch("OP Kill", Shared.OPKill, function(s) Shared.OPKill = s Load_Target() end)
+    CreateSwitch("Aura", Shared.Aura, function(s) Shared.Aura = s Load_Target() end)
+    
     CreateButton("Teleport to Target", function() Shared.GotoTarget = true Load_Target() end)
 
     CreateSection("SYSTEM")
