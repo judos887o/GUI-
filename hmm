@@ -683,7 +683,6 @@ local function MainUI()
     end)
 end
 
--- Init UI
 MainUI()
 
 task.defer(function()
