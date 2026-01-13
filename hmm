@@ -189,9 +189,6 @@ local function DisableAllScripts()
     Stop_Camlock_Mobile()
 end
 
--- ==========================================================
--- MAIN UI WRAPPER (To allow restart)
--- ==========================================================
 local function MainUI()
 
     if CoreGui:FindFirstChild("SchmecktUI") then CoreGui.SchmecktUI:Destroy() end
@@ -255,7 +252,7 @@ local function MainUI()
     Title.Size = scaleUDim(250, 20)
     Title.Position = UDim2.new(0, 58 * SCALE, 0, 8 * SCALE)
     Title.BackgroundTransparency = 1
-    Title.Text = "Schmeckt + Shadowpepper"
+    Title.Text = "Shadowpepper Hub"
     Title.Font = Enum.Font.GothamBlack
     Title.TextSize = scaleSize(16)
     Title.TextColor3 = Theme.Accent
