@@ -6,39 +6,11 @@ local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
-
--- Altes GUI entfernen, falls vorhanden
-local old = CoreGui:FindFirstChild("SchmecktHub")
-if old then old:Destroy() end
+local Stats = game:GetService("Stats")
 
 local lp = Players.LocalPlayer
-local DISCORD_INVITE = "https://discord.gg/RCpsTAAsrN"
-local INTRO_LOGO_ASSET = "rbxassetid://121759217057084"
-local GUI_OPEN_SOUND = "rbxassetid://1862043663"
+local LOGO_ASSET = "rbxassetid://121759217057084" 
 
--- THEME SETTINGS
-local THEME = {
-    BgMain    = Color3.fromRGB(90, 0, 0),
-    BgTop     = Color3.fromRGB(140, 0, 0),
-    BgInner   = Color3.fromRGB(120, 0, 0),
-    Sidebar   = Color3.fromRGB(110, 0, 0),
-    Content   = Color3.fromRGB(120, 0, 0),
-    Card      = Color3.fromRGB(135, 0, 0),
-    Card2     = Color3.fromRGB(150, 0, 0),
-    Stroke1   = Color3.fromRGB(255, 110, 110),
-    Stroke2   = Color3.fromRGB(255, 150, 150),
-    TabIdle   = Color3.fromRGB(140, 0, 0),
-    TabActive = Color3.fromRGB(185, 0, 0),
-    ToggleOff = Color3.fromRGB(175, 50, 120),
-    ToggleOn  = Color3.fromRGB(0, 180, 80),
-    MethodActive = Color3.fromRGB(140, 70, 200),
-    MethodNone = Color3.fromRGB(80, 40, 80),
-    Text      = Color3.fromRGB(255, 255, 255),
-    SubText   = Color3.fromRGB(255, 210, 210),
-    Warning   = Color3.fromRGB(255, 180, 50),
-}
-
--- GLOBAL SHARED TABLE SETUP
 getgenv().SchmecktHubPC = getgenv().SchmecktHubPC or {}
 local Shared = getgenv().SchmecktHubPC
 
@@ -66,7 +38,6 @@ Shared.Platform = Shared.Platform or "PC"
 
 Shared.Connections = Shared.Connections or {}
 
--- CONFIG SYSTEM
 local CONFIG_DIR = "SchmecktHub"
 local CONFIG_FILE = CONFIG_DIR .. "/config.json"
 local FS_OK = (typeof(isfile) == "function" and typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(makefolder) == "function" and typeof(isfolder) == "function")
@@ -112,7 +83,7 @@ local function applyConfig(cfg)
 end
 
 function Shared.SaveConfig()
-    local ok, err = pcall(function()
+    pcall(function()
         local json = HttpService:JSONEncode(serializeConfig())
         if FS_OK then
             if not isfolder(CONFIG_DIR) then makefolder(CONFIG_DIR) end
@@ -121,7 +92,6 @@ function Shared.SaveConfig()
             getgenv()._SchmecktLastCfg = json
         end
     end)
-    if not ok then warn("[SchmecktHub] Save failed:", err) end
 end
 
 local function LoadConfig()
@@ -139,1555 +109,592 @@ end
 
 LoadConfig()
 
-local function safeLoad(url, key)
+local function safeLoad(url)
     task.spawn(function()
-        local ok, err = pcall(function() loadstring(game:HttpGet(url, true))() end)
-        if not ok then warn("[SchmecktHub] Failed to load", key, ":", err) end
+        pcall(function() loadstring(game:HttpGet(url, true))() end)
     end)
 end
 
--- SCRIPT LOADERS
-local function Load_AutoArmor() safeLoad("https://raw.githubusercontent.com/judos887o/auto-armor/refs/heads/main/ar", "AutoArmor") end
-local function Load_StaffNotifier() safeLoad("https://raw.githubusercontent.com/judos887o/staff-notifie/refs/heads/main/a", "StaffNotifier") end
-local function Load_TriggerBot() safeLoad("https://raw.githubusercontent.com/judos887o/TRIGGERBOT-pc/refs/heads/main/trigger", "TriggerBot") end
-local function Load_Camlock() safeLoad("https://raw.githubusercontent.com/judos887o/camlock-pc/refs/heads/main/camlcok", "Camlock") end
-local function Load_SilentAim_FOV() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-FOV-METHOD/refs/heads/main/teat", "SilentAim_FOV") end
-local function Load_SilentAim_QMethod() safeLoad("https://raw.githubusercontent.com/judos887o/Silent-Aim/refs/heads/main/silent", "SilentAim_QMethod") end
-local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/refs/heads/main/teat", "PlayerPanel") end
-local function Load_AutoReload_S() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/refs/heads/main/teat", "AutoReload_S") end
-local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/refs/heads/main/teat", "DragShoot") end
-local function Load_Desync() safeLoad("https://raw.githubusercontent.com/judos887o/desync-schmeckt/refs/heads/main/teat", "Desync") end
-local function Load_DisableDesync() safeLoad("https://raw.githubusercontent.com/judos887o/disdes/refs/heads/main/teat", "DisableDesync") end
-local function Load_FpsBoost() safeLoad("https://raw.githubusercontent.com/judos887o/fps-nuke/refs/heads/main/teat", "FpsBoost") end
-local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/target-schmeckt/refs/heads/main/teat", "Target") end
-local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/refs/heads/main/teat", "SilentAim_Mobile") end
-local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/refs/heads/main/teat", "Camlock_Mobile") end
+local function Load_AutoArmor() safeLoad("https://raw.githubusercontent.com/judos887o/auto-armor/refs/heads/main/ar") end
+local function Load_StaffNotifier() safeLoad("https://raw.githubusercontent.com/judos887o/staff-notifie/refs/heads/main/a") end
+local function Load_TriggerBot() safeLoad("https://raw.githubusercontent.com/judos887o/TRIGGERBOT-pc/refs/heads/main/trigger") end
+local function Load_Camlock() safeLoad("https://raw.githubusercontent.com/judos887o/camlock-pc/refs/heads/main/camlcok") end
+local function Load_SilentAim_FOV() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-FOV-METHOD/refs/heads/main/teat") end
+local function Load_SilentAim_QMethod() safeLoad("https://raw.githubusercontent.com/judos887o/Silent-Aim/refs/heads/main/silent") end
+local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/refs/heads/main/teat") end
+local function Load_AutoReload_S() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/refs/heads/main/teat") end
+local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/refs/heads/main/teat") end
+local function Load_Desync() safeLoad("https://raw.githubusercontent.com/judos887o/desync-schmeckt/refs/heads/main/teat") end
+local function Load_DisableDesync() safeLoad("https://raw.githubusercontent.com/judos887o/disdes/refs/heads/main/teat") end
+local function Load_FpsBoost() safeLoad("https://raw.githubusercontent.com/judos887o/fps-nuke/refs/heads/main/teat") end
+local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/target-schmeckt/refs/heads/main/teat") end
+local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/refs/heads/main/teat") end
+local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/refs/heads/main/teat") end
 
--- ============================================================================
--- FIX: INSTANT STOMP STOP FUNCTION (VERBESSERT)
--- ============================================================================
-local function Load_InstantStomp()
-    -- Lädt dein Instant Stomp Script
-    safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/refs/heads/main/teats", "InstantStomp")
-end
+local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/refs/heads/main/teats") end
 
 local function Stop_InstantStomp()
-    -- 1. Versuche die offizielle Cleanup-Funktion vom Stomp Script
     local S = getgenv().SchmecktHubPC
-    if S and S.InstantStomp_Destroy then 
-        pcall(S.InstantStomp_Destroy)
-        S.InstantStomp_Destroy = nil -- Reset variable
-    end
-
-    -- 2. Fallback: Manuelles Aufräumen, falls das Script hängt oder Variable fehlt
-    -- a) Connections löschen (Loop stoppen)
+    if S and S.InstantStomp_Destroy then pcall(S.InstantStomp_Destroy) S.InstantStomp_Destroy = nil end
     if S and S.Connections then
-        local keysToClear = {"InstantStompCore", "InstantStompUI"}
-        for _, key in ipairs(keysToClear) do
-            if S.Connections[key] then
-                for _, c in pairs(S.Connections[key]) do pcall(function() c:Disconnect() end) end
-                S.Connections[key] = nil
-            end
-        end
+        if S.Connections["InstantStompCore"] then for _, c in pairs(S.Connections["InstantStompCore"]) do pcall(function() c:Disconnect() end) end S.Connections["InstantStompCore"] = nil end
     end
-
-    -- b) UI manuell löschen (falls Destroy Funktion versagt hat)
-    local uiName = "Schmeckt_InstantStomp_UI"
-    local g = CoreGui:FindFirstChild(uiName)
-    if g then g:Destroy() end
-    if lp and lp:FindFirstChild("PlayerGui") then
-        local pgUI = lp.PlayerGui:FindFirstChild(uiName)
-        if pgUI then pgUI:Destroy() end
-    end
-
-    -- c) Ring/Part manuell löschen
-    local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring")
-    if ring then ring:Destroy() end
+    local g = CoreGui:FindFirstChild("Schmeckt_InstantStomp_UI") if g then g:Destroy() end
+    if lp and lp:FindFirstChild("PlayerGui") then local pgUI = lp.PlayerGui:FindFirstChild("Schmeckt_InstantStomp_UI") if pgUI then pgUI:Destroy() end end
+    local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring") if ring then ring:Destroy() end
 end
--- ============================================================================
 
 local function Stop_SilentAim_Mobile()
     local Mobile = getgenv().SchmecktHubMobile
-    if not Mobile then return end
-    Mobile.SilentAim = false
-    if Mobile.Connections and Mobile.Connections["SilentAimMobile"] then
-        for _, c in pairs(Mobile.Connections["SilentAimMobile"]) do pcall(function() c:Disconnect() end) end
-        Mobile.Connections["SilentAimMobile"] = nil
-    end
-    if Mobile._MobileGUI then pcall(function() Mobile._MobileGUI:Destroy() end) Mobile._MobileGUI = nil end
+    if Mobile and Mobile._MobileGUI then pcall(function() Mobile._MobileGUI:Destroy() end) Mobile._MobileGUI = nil end
 end
 
 local function Stop_Camlock_PC()
-    local P = getgenv().SchmecktHubPC
-    if not P then return end
-    if P.Connections and (P.Connections["CamlockPC"] or P.Connections["Camlock"]) then
-        local t = P.Connections["CamlockPC"] or P.Connections["Camlock"]
-        for _, c in pairs(t) do pcall(function() c:Disconnect() end) end
-        P.Connections["CamlockPC"] = nil
-        P.Connections["Camlock"] = nil
-    end
     if CoreGui:FindFirstChild("SchmecktCamlock") then CoreGui.SchmecktCamlock:Destroy() end
 end
 
 local function Stop_Camlock_Mobile()
     local M = getgenv().SchmecktHubMobile
-    if not M then return end
-    if M.Connections and M.Connections["CamlockMobile"] then
-        for _, c in pairs(M.Connections["CamlockMobile"]) do pcall(function() c:Disconnect() end) end
-        M.Connections["CamlockMobile"] = nil
-    end
-    if M._CamlockGUI then pcall(function() M._CamlockGUI:Destroy() end) M._CamlockGUI = nil end
+    if M and M._CamlockGUI then pcall(function() M._CamlockGUI:Destroy() end) M._CamlockGUI = nil end
 end
 
 local function Load_SilentAim_ByMethod()
-    if Shared.SilentAimMethod == "FOV" then
-        Load_SilentAim_FOV()
-    elseif Shared.SilentAimMethod == "QMethod" then
-        Load_SilentAim_QMethod()
-    elseif Shared.SilentAimMethod == "MobileMethod" then
-        Load_SilentAim_Mobile_Remote()
-    end
+    if Shared.SilentAimMethod == "FOV" then Load_SilentAim_FOV()
+    elseif Shared.SilentAimMethod == "QMethod" then Load_SilentAim_QMethod()
+    elseif Shared.SilentAimMethod == "MobileMethod" then Load_SilentAim_Mobile_Remote() end
 end
 
 local function DisableAllScripts()
-    for k in pairs(Shared) do if type(Shared[k]) == "boolean" then Shared[k] = false end end
-    Shared.TargetUsername = nil
-    Shared.SilentAimMethod = nil
-    Stop_SilentAim_Mobile()
-    Stop_Camlock_PC()
-    Stop_Camlock_Mobile()
-    Stop_InstantStomp() -- Ruft die verbesserte Stop-Funktion auf
-end
-
--- UI HELPERS
-local function corner(inst, px)
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, px or 10)
-    c.Parent = inst
-    return c
-end
-
-local function stroke(inst, color, thickness, transparency)
-    local s = Instance.new("UIStroke")
-    s.Color = color
-    s.Thickness = thickness or 1
-    s.Transparency = transparency or 0
-    s.Parent = inst
-    return s
-end
-
-local function padding(inst, l, r, t, b)
-    local p = Instance.new("UIPadding")
-    p.PaddingLeft = UDim.new(0, l or 0)
-    p.PaddingRight = UDim.new(0, r or 0)
-    p.PaddingTop = UDim.new(0, t or 0)
-    p.PaddingBottom = UDim.new(0, b or 0)
-    p.Parent = inst
-    return p
-end
-
--- SOUNDS
-local clickSound = Instance.new("Sound")
-clickSound.SoundId = "rbxassetid://15675059323"
-clickSound.Volume = 1.4
-clickSound.Parent = SoundService
-
-local hoverSound = Instance.new("Sound")
-hoverSound.SoundId = "rbxassetid://107511012621133"
-hoverSound.Volume = 1.2
-hoverSound.Parent = SoundService
-
-local errorSound = Instance.new("Sound")
-errorSound.SoundId = "rbxassetid://9116367596"
-errorSound.Volume = 1.0
-errorSound.Parent = SoundService
-
-local function replaySound(snd) if snd.IsPlaying then snd.TimePosition = 0 end snd:Play() end
-local function addButtonSounds(btn)
-    btn.MouseButton1Click:Connect(function() replaySound(clickSound) end)
-    btn.MouseEnter:Connect(function() replaySound(hoverSound) end)
-end
-
--- UI CREATION
-local allRows = {}
-local allScrollFrames = {}
-local ToggleAPIs = {}
-local RefreshAimPlatform = function() end
-
-local function registerRowForAnimation(row)
-    table.insert(allRows, row)
-    if row:IsA("Frame") then
-        row.BackgroundTransparency = 1
-    elseif row:IsA("TextButton") then
-        row.BackgroundTransparency = 1
-        row.TextTransparency = 1
-    elseif row:IsA("TextLabel") then
-        row.TextTransparency = 1
-    end
-    for _, child in ipairs(row:GetDescendants()) do
-        if child:IsA("TextLabel") then
-            child.TextTransparency = 1
-        elseif child:IsA("TextButton") then
-            child.BackgroundTransparency = 1
-            child.TextTransparency = 1
-        elseif child:IsA("ImageLabel") then
-            child.ImageTransparency = 1
-        end
-    end
-end
-
-local gui = Instance.new("ScreenGui")
-gui.Name = "SchmecktHub"
-gui.IgnoreGuiInset = true
-gui.ResetOnSpawn = false
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-gui.Parent = CoreGui
-
-gui.AncestryChanged:Connect(function(_, parent) if not parent then DisableAllScripts() end end)
-
-local main = Instance.new("Frame")
-main.Name = "Main"
-main.AnchorPoint = Vector2.new(0.5, 0.5)
-main.Position = UDim2.new(0.5, 0, 0.5, 0)
-main.Size = UDim2.new(0, 740, 0, 460)
-main.BackgroundColor3 = THEME.BgMain
-main.BorderSizePixel = 0
-main.ZIndex = 2
-main.ClipsDescendants = true
-main.Parent = gui
-main.Visible = false
-corner(main, 14)
-stroke(main, THEME.Stroke1, 2, 0)
-
-local NORMAL_SIZE = main.Size
-
-local topBar = Instance.new("Frame")
-topBar.Name = "TopBar"
-topBar.BackgroundColor3 = THEME.BgTop
-topBar.BorderSizePixel = 0
-topBar.Size = UDim2.new(1, -18, 0, 52)
-topBar.Position = UDim2.new(0, 9, 0, 9)
-topBar.ZIndex = 3
-topBar.Parent = main
-corner(topBar, 14)
-stroke(topBar, THEME.Stroke2, 1, 0.15)
-
-local topGrad = Instance.new("UIGradient")
-topGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(165, 0, 0)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 0)),
-})
-topGrad.Rotation = 0
-topGrad.Parent = topBar
-
-local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "Close"
-closeBtn.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
-closeBtn.Size = UDim2.new(0, 30, 0, 30)
-closeBtn.Position = UDim2.new(0, 10, 0.5, -15)
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Text = "X"
-closeBtn.TextColor3 = THEME.Text
-closeBtn.TextSize = 14
-closeBtn.ZIndex = 4
-closeBtn.Parent = topBar
-corner(closeBtn, 10)
-addButtonSounds(closeBtn)
-
-local miniBtn = Instance.new("TextButton")
-miniBtn.Name = "Minimize"
-miniBtn.BackgroundColor3 = Color3.fromRGB(200, 55, 55)
-miniBtn.Size = UDim2.new(0, 30, 0, 30)
-miniBtn.Position = UDim2.new(0, 46, 0.5, -15)
-miniBtn.Font = Enum.Font.GothamBold
-miniBtn.Text = "–"
-miniBtn.TextColor3 = THEME.Text
-miniBtn.TextSize = 18
-miniBtn.ZIndex = 4
-miniBtn.Parent = topBar
-corner(miniBtn, 10)
-addButtonSounds(miniBtn)
-
-local topLogo = Instance.new("ImageLabel")
-topLogo.Name = "IntroLogoTop"
-topLogo.BackgroundTransparency = 1
-topLogo.Size = UDim2.new(0, 34, 0, 34)
-topLogo.Position = UDim2.new(0, 90, 0.5, -17)
-topLogo.Image = INTRO_LOGO_ASSET
-topLogo.ImageTransparency = 0
-topLogo.ScaleType = Enum.ScaleType.Crop
-topLogo.ZIndex = 4
-topLogo.Parent = topBar
-corner(topLogo, 999)
-stroke(topLogo, THEME.Stroke2, 1, 0.25)
-
-local title = Instance.new("TextLabel")
-title.BackgroundTransparency = 1
-title.Position = UDim2.new(0, 132, 0, 0)
-title.Size = UDim2.new(1, -142, 1, 0)
-title.Font = Enum.Font.GothamBlack
-title.Text = "SCHMECKT X SHADOWPEPPER HUB"
-title.TextColor3 = THEME.Text
-title.TextSize = 19
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.ZIndex = 4
-title.Parent = topBar
-
-local inner = Instance.new("Frame")
-inner.Name = "Inner"
-inner.BackgroundColor3 = THEME.BgInner
-inner.BorderSizePixel = 0
-inner.Position = UDim2.new(0, 9, 0, 70)
-inner.Size = UDim2.new(1, -18, 1, -79)
-inner.ZIndex = 2
-inner.ClipsDescendants = true
-inner.Parent = main
-corner(inner, 14)
-stroke(inner, THEME.Stroke2, 1, 0.2)
-
-local sidebar = Instance.new("Frame")
-sidebar.Name = "Sidebar"
-sidebar.BackgroundColor3 = THEME.Sidebar
-sidebar.BorderSizePixel = 0
-sidebar.Position = UDim2.new(0, 10, 0, 10)
-sidebar.Size = UDim2.new(0, 190, 1, -20)
-sidebar.ZIndex = 3
-sidebar.ClipsDescendants = false
-sidebar.Parent = inner
-corner(sidebar, 14)
-stroke(sidebar, THEME.Stroke1, 1, 0.25)
-padding(sidebar, 8, 8, 10, 10)
-
-local tabsHeader = Instance.new("TextLabel")
-tabsHeader.BackgroundColor3 = THEME.Card2
-tabsHeader.Size = UDim2.new(1, 0, 0, 28)
-tabsHeader.Font = Enum.Font.GothamSemibold
-tabsHeader.Text = "Tabs"
-tabsHeader.TextColor3 = THEME.Text
-tabsHeader.TextSize = 16
-tabsHeader.ZIndex = 4
-tabsHeader.Parent = sidebar
-corner(tabsHeader, 10)
-
-local tabsContainer = Instance.new("Frame")
-tabsContainer.BackgroundTransparency = 1
-tabsContainer.Position = UDim2.new(0, 0, 0, 36)
-tabsContainer.Size = UDim2.new(1, 0, 1, -110)
-tabsContainer.ZIndex = 4
-tabsContainer.Parent = sidebar
-
-local listTabs = Instance.new("UIListLayout")
-listTabs.FillDirection = Enum.FillDirection.Vertical
-listTabs.SortOrder = Enum.SortOrder.LayoutOrder
-listTabs.Padding = UDim.new(0, 8)
-listTabs.Parent = tabsContainer
-
-local profile = Instance.new("Frame")
-profile.BackgroundColor3 = THEME.Card
-profile.BorderSizePixel = 0
-profile.Size = UDim2.new(1, 0, 0, 64)
-profile.Position = UDim2.new(0, 0, 1, -64)
-profile.ZIndex = 4
-profile.Parent = sidebar
-corner(profile, 14)
-stroke(profile, THEME.Stroke2, 1, 0.35)
-
-local avatarImg = Instance.new("ImageLabel")
-avatarImg.BackgroundTransparency = 1
-avatarImg.Size = UDim2.new(0, 44, 0, 44)
-avatarImg.Position = UDim2.new(0, 10, 0.5, -22)
-avatarImg.ZIndex = 5
-avatarImg.Parent = profile
-corner(avatarImg, 999)
-
-local nameLabel = Instance.new("TextLabel")
-nameLabel.BackgroundTransparency = 1
-nameLabel.Position = UDim2.new(0, 62, 0, 12)
-nameLabel.Size = UDim2.new(1, -70, 0, 18)
-nameLabel.Font = Enum.Font.GothamSemibold
-nameLabel.TextColor3 = THEME.Text
-nameLabel.TextSize = 15
-nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-nameLabel.ZIndex = 5
-nameLabel.Parent = profile
-
-local subNameLabel = Instance.new("TextLabel")
-subNameLabel.BackgroundTransparency = 1
-subNameLabel.Position = UDim2.new(0, 62, 0, 32)
-subNameLabel.Size = UDim2.new(1, -70, 0, 16)
-subNameLabel.Font = Enum.Font.Gotham
-subNameLabel.TextColor3 = THEME.SubText
-subNameLabel.TextSize = 13
-subNameLabel.TextXAlignment = Enum.TextXAlignment.Left
-subNameLabel.ZIndex = 5
-subNameLabel.Parent = profile
-
-if lp then
-    nameLabel.Text = lp.DisplayName or lp.Name
-    subNameLabel.Text = "@" .. lp.Name
-    local ok, img = pcall(function() return Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100) end)
-    if ok and img then avatarImg.Image = img end
-else
-    nameLabel.Text = "Player"
-    subNameLabel.Text = "@Unknown"
-end
-
-local profileBtnCover = Instance.new("TextButton")
-profileBtnCover.BackgroundTransparency = 1
-profileBtnCover.Size = UDim2.new(1, 0, 1, 0)
-profileBtnCover.Text = ""
-profileBtnCover.ZIndex = 6
-profileBtnCover.Parent = profile
-addButtonSounds(profileBtnCover)
-
-local settingsOverlay = Instance.new("Frame")
-settingsOverlay.BackgroundColor3 = Color3.fromRGB(0,0,0)
-settingsOverlay.BackgroundTransparency = 0.4
-settingsOverlay.Size = UDim2.new(1, 0, 1, 0)
-settingsOverlay.Visible = false
-settingsOverlay.ZIndex = 100
-settingsOverlay.Parent = gui
-
-local settingsWin = Instance.new("Frame")
-settingsWin.AnchorPoint = Vector2.new(0.5, 0.5)
-settingsWin.Position = UDim2.new(0.5, 0, 0.5, 0)
-settingsWin.Size = UDim2.new(0, 420, 0, 230)
-settingsWin.BackgroundColor3 = THEME.BgMain
-settingsWin.BorderSizePixel = 0
-settingsWin.ZIndex = 101
-settingsWin.Parent = settingsOverlay
-corner(settingsWin, 12)
-stroke(settingsWin, THEME.Stroke1, 2, 0.1)
-
-local settingsTop = Instance.new("Frame")
-settingsTop.BackgroundColor3 = THEME.BgTop
-settingsTop.Size = UDim2.new(1, -16, 0, 44)
-settingsTop.Position = UDim2.new(0, 8, 0, 8)
-settingsTop.BorderSizePixel = 0
-settingsTop.ZIndex = 102
-settingsTop.Parent = settingsWin
-corner(settingsTop, 10)
-stroke(settingsTop, THEME.Stroke2, 1, 0.2)
-
-local settingsTitle = Instance.new("TextLabel")
-settingsTitle.BackgroundTransparency = 1
-settingsTitle.Size = UDim2.new(1, -90, 1, 0)
-settingsTitle.Position = UDim2.new(0, 12, 0, 0)
-settingsTitle.Font = Enum.Font.GothamSemibold
-settingsTitle.Text = "Settings"
-settingsTitle.TextColor3 = THEME.Text
-settingsTitle.TextSize = 16
-settingsTitle.TextXAlignment = Enum.TextXAlignment.Left
-settingsTitle.ZIndex = 103
-settingsTitle.Parent = settingsTop
-
-local settingsClose = Instance.new("TextButton")
-settingsClose.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
-settingsClose.Size = UDim2.new(0, 30, 0, 30)
-settingsClose.Position = UDim2.new(1, -38, 0.5, -15)
-settingsClose.Font = Enum.Font.GothamBold
-settingsClose.Text = "X"
-settingsClose.TextColor3 = THEME.Text
-settingsClose.TextSize = 14
-settingsClose.ZIndex = 103
-settingsClose.Parent = settingsTop
-corner(settingsClose, 10)
-addButtonSounds(settingsClose)
-
-local settingsBody = Instance.new("Frame")
-settingsBody.BackgroundColor3 = THEME.BgInner
-settingsBody.Size = UDim2.new(1, -16, 1, -66)
-settingsBody.Position = UDim2.new(0, 8, 0, 58)
-settingsBody.BorderSizePixel = 0
-settingsBody.ZIndex = 102
-settingsBody.Parent = settingsWin
-corner(settingsBody, 10)
-stroke(settingsBody, THEME.Stroke2, 1, 0.2)
-padding(settingsBody, 10, 10, 10, 10)
-
-local headline = Instance.new("TextLabel")
-headline.BackgroundTransparency = 1
-headline.Size = UDim2.new(1, 0, 0, 20)
-headline.Font = Enum.Font.GothamSemibold
-headline.Text = "Choose Version"
-headline.TextColor3 = THEME.Text
-headline.TextSize = 14
-headline.TextXAlignment = Enum.TextXAlignment.Left
-headline.ZIndex = 103
-headline.Parent = settingsBody
-
-local btnRow = Instance.new("Frame")
-btnRow.BackgroundTransparency = 1
-btnRow.Size = UDim2.new(1, 0, 0, 40)
-btnRow.Position = UDim2.new(0, 0, 0, 28)
-btnRow.ZIndex = 103
-btnRow.Parent = settingsBody
-
-local btnLayout = Instance.new("UIListLayout", btnRow)
-btnLayout.FillDirection = Enum.FillDirection.Horizontal
-btnLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-btnLayout.Padding = UDim.new(0, 10)
-
-local pcBtn = Instance.new("TextButton")
-pcBtn.BackgroundColor3 = THEME.TabIdle
-pcBtn.Size = UDim2.new(0, 160, 1, 0)
-pcBtn.Text = "PC VERSION"
-pcBtn.Font = Enum.Font.GothamBold
-pcBtn.TextColor3 = THEME.Text
-pcBtn.TextSize = 14
-pcBtn.ZIndex = 104
-pcBtn.Parent = btnRow
-corner(pcBtn, 8)
-addButtonSounds(pcBtn)
-
-local mobBtn = Instance.new("TextButton")
-mobBtn.BackgroundColor3 = THEME.TabIdle
-mobBtn.Size = UDim2.new(0, 160, 1, 0)
-mobBtn.Text = "MOBILE VERSION"
-mobBtn.Font = Enum.Font.GothamBold
-mobBtn.TextColor3 = THEME.Text
-mobBtn.TextSize = 14
-mobBtn.ZIndex = 104
-mobBtn.Parent = btnRow
-corner(mobBtn, 8)
-addButtonSounds(mobBtn)
-
-local tip = Instance.new("TextLabel")
-tip.BackgroundTransparency = 1
-tip.Position = UDim2.new(0, 0, 0, 76)
-tip.Size = UDim2.new(1, 0, 0, 36)
-tip.Font = Enum.Font.Gotham
-tip.TextColor3 = THEME.SubText
-tip.TextSize = 12
-tip.TextWrapped = true
-tip.TextXAlignment = Enum.TextXAlignment.Left
-tip.TextYAlignment = Enum.TextYAlignment.Top
-tip.ZIndex = 103
-tip.Text = "Your selection will be saved. On MOBILE, you can choose Silent Aim FOV or Toggle method. Camlock Mobile is separate."
-tip.Parent = settingsBody
-
-local resetBtn = Instance.new("TextButton")
-resetBtn.BackgroundColor3 = THEME.Card2
-resetBtn.Size = UDim2.new(0, 160, 0, 30)
-resetBtn.Position = UDim2.new(0, 0, 1, -30)
-resetBtn.Text = "Reset saved settings"
-resetBtn.Font = Enum.Font.GothamSemibold
-resetBtn.TextColor3 = THEME.Text
-resetBtn.TextSize = 12
-resetBtn.ZIndex = 104
-resetBtn.Parent = settingsBody
-corner(resetBtn, 8)
-addButtonSounds(resetBtn)
-
-local doneBtn = Instance.new("TextButton")
-doneBtn.BackgroundColor3 = THEME.TabActive
-doneBtn.Size = UDim2.new(0, 120, 0, 30)
-doneBtn.Position = UDim2.new(1, -120, 1, -30)
-doneBtn.Text = "Done"
-doneBtn.Font = Enum.Font.GothamBold
-doneBtn.TextColor3 = THEME.Text
-doneBtn.TextSize = 13
-doneBtn.ZIndex = 104
-doneBtn.Parent = settingsBody
-corner(doneBtn, 8)
-addButtonSounds(doneBtn)
-
-local function refreshPlatformButtons()
-    if Shared.Platform == "Mobile" then
-        mobBtn.BackgroundColor3 = THEME.TabActive
-        pcBtn.BackgroundColor3 = THEME.TabIdle
-    else
-        pcBtn.BackgroundColor3 = THEME.TabActive
-        mobBtn.BackgroundColor3 = THEME.TabIdle
-    end
-end
-
-local function showSettings()
-    refreshPlatformButtons()
-    settingsOverlay.Visible = true
-    settingsWin.Size = UDim2.new(0, 0, 0, 0)
-    TweenService:Create(settingsWin, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 420, 0, 230)}):Play()
-end
-
-local function hideSettings()
-    settingsOverlay.Visible = false
-end
-
-local function setPlatform(p)
-    Shared.Platform = p
-    if Shared.Platform == "Mobile" then
-        if Shared.SilentAimMethod ~= "FOV" and Shared.SilentAimMethod ~= "MobileMethod" then
-            Shared.SilentAimMethod = "MobileMethod"
-        end
-    else
-        Stop_SilentAim_Mobile()
-        if Shared.SilentAimMethod == "MobileMethod" then Shared.SilentAimMethod = nil end
-    end
-    Shared.SaveConfig()
-    refreshPlatformButtons()
-    RefreshAimPlatform()
-    if Shared.SilentAim then Load_SilentAim_ByMethod() end
-    if Shared.Camlock then
-        if Shared.Platform == "Mobile" then
-            Load_Camlock_Mobile()
-        else
-            Load_Camlock()
-        end
-    end
-end
-
-profileBtnCover.MouseButton1Click:Connect(showSettings)
-settingsClose.MouseButton1Click:Connect(hideSettings)
-doneBtn.MouseButton1Click:Connect(hideSettings)
-pcBtn.MouseButton1Click:Connect(function() setPlatform("PC") end)
-mobBtn.MouseButton1Click:Connect(function() setPlatform("Mobile") end)
-resetBtn.MouseButton1Click:Connect(function()
-    for k, v in pairs(Shared) do
-        if type(v) == "boolean" then Shared[k] = false end
-    end
-    Stop_SilentAim_Mobile()
-    Stop_Camlock_PC()
-    Stop_Camlock_Mobile()
+    Shared.AutoArmor = false
+    Shared.StaffNotifier = false
+    Shared.TriggerBot = false
+    Shared.Camlock = false
+    Shared.SilentAim = false
+    Shared.Desync = false
+    Shared.DisableDesync = false
+    Shared.FpsBoost = false
+    Shared.AutoReload = false
+    Shared.PlayerPanel = false
+    Shared.DragShoot = false
+    Shared.AutoKatanaKill = false
+    Shared.Fling = false
+    Shared.HighlightTarget = false
+    Shared.ViewTarget = false
+    Shared.GotoTarget = false
+    Shared.InstantStomp = false
+    
     Stop_InstantStomp()
-    Shared.SilentAimMethod = nil
-    Shared.Platform = "PC"
-    Shared.SaveConfig()
-    refreshPlatformButtons()
-    RefreshAimPlatform()
-end)
+    Stop_SilentAim_Mobile()
+    Stop_Camlock_PC()
+    Stop_Camlock_Mobile()
+end
 
-local content = Instance.new("Frame")
-content.Name = "Content"
-content.BackgroundColor3 = THEME.Content
-content.BorderSizePixel = 0
-content.Position = UDim2.new(0, 210, 0, 10)
-content.Size = UDim2.new(1, -220, 1, -20)
-content.ZIndex = 3
-content.ClipsDescendants = true
-content.Parent = inner
-corner(content, 14)
-stroke(content, THEME.Stroke1, 1, 0.25)
+-- ==========================================================
+-- MAIN UI WRAPPER (To allow restart)
+-- ==========================================================
+local function MainUI()
 
-local function createToggleRow(parent, text, order, callback)
-    local row = Instance.new("Frame")
-    row.BackgroundColor3 = THEME.Card
-    row.BorderSizePixel = 0
-    row.Size = UDim2.new(1, 0, 0, 38)
-    row.ZIndex = 4
-    row.LayoutOrder = order or 0
-    row.Parent = parent
-    corner(row, 10)
-    stroke(row, THEME.Stroke2, 1, 0.35)
+    if CoreGui:FindFirstChild("SchmecktUI") then CoreGui.SchmecktUI:Destroy() end
 
-    local label = Instance.new("TextLabel")
-    label.BackgroundTransparency = 1
-    label.Position = UDim2.new(0, 12, 0, 0)
-    label.Size = UDim2.new(1, -120, 1, 0)
-    label.Font = Enum.Font.GothamSemibold
-    label.Text = text or "Option"
-    label.TextColor3 = THEME.Text
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.ZIndex = 5
-    label.Parent = row
-
-    local pill = Instance.new("TextButton")
-    pill.AutoButtonColor = false
-    pill.AnchorPoint = Vector2.new(1, 0.5)
-    pill.Position = UDim2.new(1, -8, 0.5, 0)
-    pill.Size = UDim2.new(0, 70, 0, 26)
-    pill.Font = Enum.Font.GothamBold
-    pill.TextSize = 12
-    pill.TextColor3 = THEME.Text
-    pill.ZIndex = 6
-    pill.Parent = row
-    corner(pill, 999)
-    addButtonSounds(pill)
-
-    local state = false
-    local function refresh()
-        if state then
-            pill.BackgroundColor3 = THEME.ToggleOn
-            pill.Text = "ON"
-        else
-            pill.BackgroundColor3 = THEME.ToggleOff
-            pill.Text = "OFF"
-        end
+    local SCALE = 1
+    if Shared.Platform == "Mobile" or UserInputService.TouchEnabled then
+        SCALE = 1 / 1.5
     end
-    refresh()
 
-    pill.MouseButton1Click:Connect(function()
-        state = not state
-        refresh()
-        if callback then task.spawn(function() callback(state) end) end
-        if Shared.SaveConfig then Shared.SaveConfig() end
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "SchmecktUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = CoreGui
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    local Theme = {
+        Background = Color3.fromRGB(15, 5, 5),
+        Accent = Color3.fromRGB(220, 0, 0),
+        ToggleOn = Color3.fromRGB(200, 0, 0),
+        ToggleOff = Color3.fromRGB(45, 10, 10),
+        Text = Color3.fromRGB(255, 255, 255),
+        SubText = Color3.fromRGB(255, 150, 150),
+        Stroke = Color3.fromRGB(80, 0, 0)
+    }
+
+    local function scaleUDim(x, y)
+        return UDim2.new(0, x * SCALE, 0, y * SCALE)
+    end
+    local function scaleSize(s)
+        return math.floor(s * SCALE)
+    end
+
+    local BottomBar = Instance.new("Frame")
+    BottomBar.Name = "BottomBar"
+    BottomBar.Size = scaleUDim(500, 55)
+    BottomBar.Position = UDim2.new(0.5, -(250 * SCALE), 1, -(70 * SCALE)) 
+    BottomBar.BackgroundColor3 = Theme.Background
+    BottomBar.BorderSizePixel = 0
+    BottomBar.Parent = ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 10 * SCALE)
+    UICorner.Parent = BottomBar
+
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Theme.Stroke
+    UIStroke.Thickness = 1 * SCALE
+    UIStroke.Parent = BottomBar
+
+    local Logo = Instance.new("ImageLabel")
+    Logo.Name = "Logo"
+    Logo.Size = scaleUDim(35, 35)
+    Logo.Position = UDim2.new(0, 12 * SCALE, 0.5, -(17.5 * SCALE))
+    Logo.BackgroundColor3 = Color3.fromRGB(20, 0, 0)
+    Logo.Image = LOGO_ASSET
+    Logo.Parent = BottomBar
+    Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 8 * SCALE)
+
+    local Title = Instance.new("TextLabel")
+    Title.Name = "Title"
+    Title.Size = scaleUDim(250, 20)
+    Title.Position = UDim2.new(0, 58 * SCALE, 0, 8 * SCALE)
+    Title.BackgroundTransparency = 1
+    Title.Text = "Schmeckt + Shadowpepper"
+    Title.Font = Enum.Font.GothamBlack
+    Title.TextSize = scaleSize(16)
+    Title.TextColor3 = Theme.Accent
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = BottomBar
+
+    local SubTitle = Instance.new("TextLabel")
+    SubTitle.Name = "SubTitle"
+    SubTitle.Size = scaleUDim(300, 15)
+    SubTitle.Position = UDim2.new(0, 58 * SCALE, 0, 28 * SCALE)
+    SubTitle.BackgroundTransparency = 1
+    SubTitle.Text = "Type: " .. Shared.Platform .. " (developed by schmeckt)"
+    SubTitle.Font = Enum.Font.GothamBold
+    SubTitle.TextSize = scaleSize(11)
+    SubTitle.TextColor3 = Theme.SubText
+    SubTitle.TextXAlignment = Enum.TextXAlignment.Left
+    SubTitle.Parent = BottomBar
+
+    local Divider = Instance.new("Frame")
+    Divider.Name = "Divider"
+    Divider.Size = UDim2.new(0, 1, 0, 30 * SCALE)
+    Divider.Position = UDim2.new(0, 350 * SCALE, 0.5, -(15 * SCALE))
+    Divider.BackgroundColor3 = Theme.Stroke
+    Divider.BorderSizePixel = 0
+    Divider.Parent = BottomBar
+
+    local StatsLabel = Instance.new("TextLabel")
+    StatsLabel.Name = "Stats"
+    StatsLabel.Size = UDim2.new(0, 140 * SCALE, 1, 0)
+    StatsLabel.Position = UDim2.new(0, 365 * SCALE, 0, 0)
+    StatsLabel.BackgroundTransparency = 1
+    StatsLabel.Text = "FPS: ..\nPing: .."
+    StatsLabel.Font = Enum.Font.GothamBold
+    StatsLabel.TextSize = scaleSize(11)
+    StatsLabel.TextColor3 = Theme.Text
+    StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
+    StatsLabel.Parent = BottomBar
+
+    task.spawn(function()
+        while BottomBar.Parent do
+            local fps = math.floor(1 / (RunService.RenderStepped:Wait() + 0.001))
+            local ping = 0
+            pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+            StatsLabel.Text = "FPS: " .. fps .. "\nPing: " .. ping .. "ms"
+            task.wait(0.5)
+        end
     end)
 
-    registerRowForAnimation(row)
-    local api = {}
-    function api.SetState(v) state = v and true or false refresh() end
-    function api.GetState() return state end
-    return api
-end
+    local HubFrame = Instance.new("Frame")
+    HubFrame.Name = "HubFrame"
+    HubFrame.Size = scaleUDim(260, 420) 
+    HubFrame.Position = UDim2.new(1, -(280 * SCALE), 0.5, -(210 * SCALE))
+    HubFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
+    HubFrame.BackgroundTransparency = 0.05
+    HubFrame.BorderSizePixel = 0
+    HubFrame.Parent = ScreenGui
 
-local function createActionButton(parent, text, order, callback)
-    local btn = Instance.new("TextButton")
-    btn.BackgroundColor3 = THEME.Card2
-    btn.Size = UDim2.new(1, 0, 0, 34)
-    btn.Text = text
-    btn.Font = Enum.Font.GothamSemibold
-    btn.TextColor3 = THEME.Text
-    btn.TextSize = 14
-    btn.ZIndex = 4
-    btn.LayoutOrder = order
-    btn.Parent = parent
-    corner(btn, 10)
-    stroke(btn, THEME.Stroke2, 1, 0.35)
-    addButtonSounds(btn)
-    registerRowForAnimation(btn)
-    btn.MouseButton1Click:Connect(function() if callback then task.spawn(callback) end end)
-    return btn
-end
+    local HubCorner = Instance.new("UICorner")
+    HubCorner.CornerRadius = UDim.new(0, 12 * SCALE)
+    HubCorner.Parent = HubFrame
 
-local tabs = {
-    {id = "Main", text = "Main"},
-    {id = "Aim", text = "Aim"},
-    {id = "Target", text = "Target"},
-    {id = "Info", text = "Info"},
-}
+    local HubStroke = Instance.new("UIStroke")
+    HubStroke.Color = Theme.Accent
+    HubStroke.Transparency = 0.5
+    HubStroke.Thickness = 1.5 * SCALE
+    HubStroke.Parent = HubFrame
 
-local tabButtons = {}
-local tabFrames = {}
+    local HeaderText = Instance.new("TextLabel")
+    HeaderText.Size = UDim2.new(1, -(24 * SCALE), 0, 30 * SCALE)
+    HeaderText.Position = UDim2.new(0, 12 * SCALE, 0, 10 * SCALE)
+    HeaderText.BackgroundTransparency = 1
+    HeaderText.Text = "FEATURES"
+    HeaderText.Font = Enum.Font.GothamBlack
+    HeaderText.TextSize = scaleSize(11)
+    HeaderText.TextColor3 = Theme.SubText
+    HeaderText.TextXAlignment = Enum.TextXAlignment.Left
+    HeaderText.Parent = HubFrame
 
-local aimPCContainer, aimMobileContainer
-local function createTabFrame(name)
-    local scroll = Instance.new("ScrollingFrame")
-    scroll.Name = name .. "_Page"
-    scroll.BackgroundTransparency = 1
-    scroll.Size = UDim2.new(1, 0, 1, 0)
-    scroll.Position = UDim2.new(0, 0, 0, 0)
-    scroll.Visible = false
-    scroll.ZIndex = 3
-    scroll.Parent = content
-    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    scroll.ScrollBarThickness = 4
-    scroll.ScrollBarImageColor3 = THEME.Stroke1
-    scroll.BorderSizePixel = 0
-    scroll.ClipsDescendants = true
-    scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    scroll.ScrollingDirection = Enum.ScrollingDirection.Y
-    scroll.CanvasPosition = Vector2.new(0, 0)
+    local Scroll = Instance.new("ScrollingFrame")
+    Scroll.Name = "Scroll"
+    Scroll.Size = UDim2.new(1, 0, 1, -(50 * SCALE))
+    Scroll.Position = UDim2.new(0, 0, 0, 40 * SCALE)
+    Scroll.BackgroundTransparency = 1
+    Scroll.BorderSizePixel = 0
+    Scroll.ScrollBarThickness = 2 * SCALE
+    Scroll.ScrollBarImageColor3 = Theme.Accent
+    Scroll.Parent = HubFrame
 
-    table.insert(allScrollFrames, scroll)
+    local UIList = Instance.new("UIListLayout")
+    UIList.Parent = Scroll
+    UIList.SortOrder = Enum.SortOrder.LayoutOrder
+    UIList.Padding = UDim.new(0, 2 * SCALE)
 
-    local innerFrame = Instance.new("Frame")
-    innerFrame.Name = "InnerFrame"
-    innerFrame.BackgroundTransparency = 1
-    innerFrame.Size = UDim2.new(1, -20, 0, 0)
-    innerFrame.Position = UDim2.new(0, 10, 0, 10)
-    innerFrame.AutomaticSize = Enum.AutomaticSize.Y
-    innerFrame.ZIndex = 3
-    innerFrame.Parent = scroll
-
-    local layout = Instance.new("UIListLayout", innerFrame)
-    layout.FillDirection = Enum.FillDirection.Vertical
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 6)
-
-    local header = Instance.new("TextLabel")
-    header.BackgroundColor3 = THEME.Card2
-    header.BorderSizePixel = 0
-    header.Size = UDim2.new(1, 0, 0, 36)
-    header.Font = Enum.Font.GothamSemibold
-    header.Text = "  " .. name
-    header.TextColor3 = THEME.Text
-    header.TextSize = 15
-    header.TextXAlignment = Enum.TextXAlignment.Left
-    header.ZIndex = 4
-    header.LayoutOrder = 0
-    header.Parent = innerFrame
-    corner(header, 10)
-    stroke(header, THEME.Stroke2, 1, 0.35)
-    registerRowForAnimation(header)
-
-    if name == "Main" then
-        ToggleAPIs.AutoArmor = createToggleRow(innerFrame, "Auto Armor [PC]", 2, function(on) Shared.AutoArmor = on if on then Load_AutoArmor() end end)
-        ToggleAPIs.StaffNotifier = createToggleRow(innerFrame, "Staff Notifier [PC]", 3, function(on) Shared.StaffNotifier = on if on then Load_StaffNotifier() end end)
-
-        ToggleAPIs.InstantStomp = createToggleRow(innerFrame, "Instant Stomp", 4, function(on)
-            Shared.InstantStomp = on
-            if on then
-                Load_InstantStomp()
-            else
-                Stop_InstantStomp()
-            end
-            Shared.SaveConfig()
-        end)
-
-        ToggleAPIs.Desync = createToggleRow(innerFrame, "Desync", 5, function(on) Shared.Desync = on if on then Load_Desync() end end)
-        ToggleAPIs.DisableDesync = createToggleRow(innerFrame, "Disable Desync", 6, function(on) Shared.DisableDesync = on if on then Load_DisableDesync() end end)
-        ToggleAPIs.FpsBoost = createToggleRow(innerFrame, "Fps Boost", 7, function(on) Shared.FpsBoost = on if on then Load_FpsBoost() end end)
-        ToggleAPIs.PlayerPanel = createToggleRow(innerFrame, "Player Panel [PC]", 8, function(on) Shared.PlayerPanel = on if on then Load_PlayerPanel() end end)
-        ToggleAPIs.AutoReload = createToggleRow(innerFrame, "Auto Reload [PC]", 9, function(on) Shared.AutoReload = on if on then Load_AutoReload_S() end end)
-        ToggleAPIs.DragShoot = createToggleRow(innerFrame, "Drag Shoot [PC]", 10, function(on) Shared.DragShoot = on if on then Load_DragShoot() end end)
-        return scroll
+    local function CreateSection(text)
+        local Sec = Instance.new("TextLabel")
+        Sec.Size = scaleUDim(260, 25)
+        Sec.BackgroundTransparency = 1
+        Sec.Text = "  " .. text
+        Sec.TextColor3 = Theme.Accent
+        Sec.Font = Enum.Font.GothamBlack
+        Sec.TextSize = scaleSize(10)
+        Sec.TextXAlignment = Enum.TextXAlignment.Left
+        Sec.Parent = Scroll
+        return Sec
     end
 
-    if name == "Aim" then
-        local function shake(container)
-            if not container then return end
-            local originalPos = container.Position
-            for i = 1, 6 do
-                task.delay(i * 0.04, function()
-                    if container and container.Parent then
-                        container.Position = UDim2.new(originalPos.X.Scale, originalPos.X.Offset + (i % 2 == 0 and 6 or -6), originalPos.Y.Scale, originalPos.Y.Offset)
-                    end
-                end)
-            end
-            task.delay(0.3, function() if container and container.Parent then container.Position = originalPos end end)
+    local function CreateSwitch(text, default, callback)
+        local Button = Instance.new("TextButton")
+        Button.Name = text
+        Button.Size = scaleUDim(260, 40)
+        Button.BackgroundTransparency = 1
+        Button.Text = ""
+        Button.Parent = Scroll
+        
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(1, -(60 * SCALE), 1, 0)
+        Label.Position = UDim2.new(0, 15 * SCALE, 0, 0)
+        Label.BackgroundTransparency = 1
+        Label.Text = text
+        Label.Font = Enum.Font.GothamMedium
+        Label.TextSize = scaleSize(13)
+        Label.TextColor3 = Theme.Text
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.Parent = Button
+        
+        local SwitchBg = Instance.new("Frame")
+        SwitchBg.Size = scaleUDim(36, 20)
+        SwitchBg.Position = UDim2.new(1, -(50 * SCALE), 0.5, -(10 * SCALE))
+        SwitchBg.BackgroundColor3 = default and Theme.ToggleOn or Theme.ToggleOff
+        SwitchBg.BorderSizePixel = 0
+        SwitchBg.Parent = Button
+        
+        local SwCorner = Instance.new("UICorner")
+        SwCorner.CornerRadius = UDim.new(1, 0)
+        SwCorner.Parent = SwitchBg
+        
+        local Circle = Instance.new("Frame")
+        Circle.Size = scaleUDim(16, 16)
+        local startX = default and (18 * SCALE) or (2 * SCALE)
+        Circle.Position = UDim2.new(0, startX, 0.5, -(8 * SCALE))
+        Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        Circle.BorderSizePixel = 0
+        Circle.Parent = SwitchBg
+        
+        local CCorner = Instance.new("UICorner")
+        CCorner.CornerRadius = UDim.new(1, 0)
+        CCorner.Parent = Circle
+        
+        local enabled = default
+        
+        local function update()
+            local targetX = enabled and (18 * SCALE) or (2 * SCALE)
+            local targetColor = enabled and Theme.ToggleOn or Theme.ToggleOff
+            TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(0, targetX, 0.5, -(8 * SCALE))}):Play()
+            TweenService:Create(SwitchBg, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
         end
-
-        ToggleAPIs.TriggerBot = createToggleRow(innerFrame, "Triggerbot", 1, function(on)
-            Shared.TriggerBot = on
-            if on then Load_TriggerBot() end
+        
+        Button.MouseButton1Click:Connect(function()
+            enabled = not enabled
+            update()
+            if callback then callback(enabled) end
             Shared.SaveConfig()
         end)
-
-        aimPCContainer = Instance.new("Frame")
-        aimPCContainer.BackgroundTransparency = 1
-        aimPCContainer.Size = UDim2.new(1, 0, 0, 0)
-        aimPCContainer.AutomaticSize = Enum.AutomaticSize.Y
-        aimPCContainer.ZIndex = 4
-        aimPCContainer.LayoutOrder = 2
-        aimPCContainer.Parent = innerFrame
-
-        local listPC = Instance.new("UIListLayout", aimPCContainer)
-        listPC.FillDirection = Enum.FillDirection.Vertical
-        listPC.SortOrder = Enum.SortOrder.LayoutOrder
-        listPC.Padding = UDim.new(0, 6)
-
-        local silentApiPC, camApiPC
-        local methodContainerPC, statusLabelPC, fovBtnPC, qMethodBtnPC
-
-        local function updateMethodUI_PC()
-            if not statusLabelPC then return end
-            if Shared.SilentAimMethod == "FOV" then
-                if fovBtnPC then fovBtnPC.BackgroundColor3 = THEME.MethodActive end
-                if qMethodBtnPC then qMethodBtnPC.BackgroundColor3 = THEME.MethodNone end
-                statusLabelPC.Text = "Method: FOV"
-                statusLabelPC.TextColor3 = THEME.MethodActive
-            elseif Shared.SilentAimMethod == "QMethod" then
-                if fovBtnPC then fovBtnPC.BackgroundColor3 = THEME.MethodNone end
-                if qMethodBtnPC then qMethodBtnPC.BackgroundColor3 = THEME.MethodActive end
-                statusLabelPC.Text = "Method: Q-Lock"
-                statusLabelPC.TextColor3 = THEME.MethodActive
-            else
-                if fovBtnPC then fovBtnPC.BackgroundColor3 = THEME.MethodNone end
-                if qMethodBtnPC then qMethodBtnPC.BackgroundColor3 = THEME.MethodNone end
-                statusLabelPC.Text = "Select method first!"
-                statusLabelPC.TextColor3 = THEME.Warning
-            end
+        
+        local api = {}
+        function api.Set(val)
+            enabled = val
+            update()
         end
-
-        local function loadCurrentMethod_PC()
-            if Shared.SilentAimMethod == "FOV" then
-                Load_SilentAim_FOV()
-            elseif Shared.SilentAimMethod == "QMethod" then
-                Load_SilentAim_QMethod()
-            end
-        end
-
-        silentApiPC = createToggleRow(aimPCContainer, "Silent Aim PC", 2, function(on)
-            Shared.SilentAim = on
-            if on then
-                if Shared.SilentAimMethod ~= "FOV" and Shared.SilentAimMethod ~= "QMethod" then
-                    silentApiPC.SetState(false)
-                    Shared.SilentAim = false
-                    replaySound(errorSound)
-                    shake(methodContainerPC)
-                else
-                    Stop_SilentAim_Mobile()
-                    loadCurrentMethod_PC()
-                end
-            else
-                Stop_SilentAim_Mobile()
-            end
-            Shared.SaveConfig()
-        end)
-        ToggleAPIs.SilentAimPC = silentApiPC
-
-        local spacerPC1 = Instance.new("Frame")
-        spacerPC1.BackgroundTransparency = 1
-        spacerPC1.Size = UDim2.new(1, 0, 0, 4)
-        spacerPC1.LayoutOrder = 3
-        spacerPC1.Parent = aimPCContainer
-
-        methodContainerPC = Instance.new("Frame")
-        methodContainerPC.BackgroundColor3 = THEME.Card2
-        methodContainerPC.BorderSizePixel = 0
-        methodContainerPC.Size = UDim2.new(1, 0, 0, 70)
-        methodContainerPC.ZIndex = 4
-        methodContainerPC.LayoutOrder = 4
-        methodContainerPC.Parent = aimPCContainer
-        corner(methodContainerPC, 12)
-        stroke(methodContainerPC, THEME.Stroke1, 1.5, 0.2)
-        registerRowForAnimation(methodContainerPC)
-
-        local titleLabelPC = Instance.new("TextLabel")
-        titleLabelPC.BackgroundTransparency = 1
-        titleLabelPC.Position = UDim2.new(0, 12, 0, 8)
-        titleLabelPC.Size = UDim2.new(0.5, -12, 0, 18)
-        titleLabelPC.Font = Enum.Font.GothamBold
-        titleLabelPC.Text = "Silent Aim Method"
-        titleLabelPC.TextColor3 = THEME.Text
-        titleLabelPC.TextSize = 13
-        titleLabelPC.TextXAlignment = Enum.TextXAlignment.Left
-        titleLabelPC.ZIndex = 5
-        titleLabelPC.Parent = methodContainerPC
-
-        statusLabelPC = Instance.new("TextLabel")
-        statusLabelPC.BackgroundTransparency = 1
-        statusLabelPC.Position = UDim2.new(0.5, 0, 0, 8)
-        statusLabelPC.Size = UDim2.new(0.5, -12, 0, 18)
-        statusLabelPC.Font = Enum.Font.GothamSemibold
-        statusLabelPC.Text = "Select method first!"
-        statusLabelPC.TextColor3 = THEME.Warning
-        statusLabelPC.TextSize = 11
-        statusLabelPC.TextXAlignment = Enum.TextXAlignment.Right
-        statusLabelPC.ZIndex = 5
-        statusLabelPC.Parent = methodContainerPC
-
-        local btnContainerPC = Instance.new("Frame")
-        btnContainerPC.BackgroundTransparency = 1
-        btnContainerPC.Position = UDim2.new(0, 10, 0, 34)
-        btnContainerPC.Size = UDim2.new(1, -20, 0, 28)
-        btnContainerPC.ZIndex = 5
-        btnContainerPC.Parent = methodContainerPC
-
-        local btnLayoutPC = Instance.new("UIListLayout", btnContainerPC)
-        btnLayoutPC.FillDirection = Enum.FillDirection.Horizontal
-        btnLayoutPC.SortOrder = Enum.SortOrder.LayoutOrder
-        btnLayoutPC.Padding = UDim.new(0, 10)
-        btnLayoutPC.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-        fovBtnPC = Instance.new("TextButton")
-        fovBtnPC.BackgroundColor3 = THEME.MethodNone
-        fovBtnPC.Size = UDim2.new(0.45, 0, 1, 0)
-        fovBtnPC.Text = "FOV Method"
-        fovBtnPC.Font = Enum.Font.GothamBold
-        fovBtnPC.TextColor3 = THEME.Text
-        fovBtnPC.TextSize = 12
-        fovBtnPC.ZIndex = 6
-        fovBtnPC.LayoutOrder = 1
-        fovBtnPC.Parent = btnContainerPC
-        corner(fovBtnPC, 8)
-        addButtonSounds(fovBtnPC)
-        fovBtnPC.MouseButton1Click:Connect(function()
-            Shared.SilentAimMethod = "FOV"
-            updateMethodUI_PC()
-            if Shared.SilentAim then
-                Stop_SilentAim_Mobile()
-                Load_SilentAim_FOV()
-            end
-            Shared.SaveConfig()
-        end)
-
-        qMethodBtnPC = Instance.new("TextButton")
-        qMethodBtnPC.BackgroundColor3 = THEME.MethodNone
-        qMethodBtnPC.Size = UDim2.new(0.45, 0, 1, 0)
-        qMethodBtnPC.Text = "Q Method"
-        qMethodBtnPC.Font = Enum.Font.GothamBold
-        qMethodBtnPC.TextColor3 = THEME.Text
-        qMethodBtnPC.TextSize = 12
-        qMethodBtnPC.ZIndex = 6
-        qMethodBtnPC.LayoutOrder = 2
-        qMethodBtnPC.Parent = btnContainerPC
-        corner(qMethodBtnPC, 8)
-        addButtonSounds(qMethodBtnPC)
-        qMethodBtnPC.MouseButton1Click:Connect(function()
-            Shared.SilentAimMethod = "QMethod"
-            updateMethodUI_PC()
-            if Shared.SilentAim then
-                Stop_SilentAim_Mobile()
-                Load_SilentAim_QMethod()
-            end
-            Shared.SaveConfig()
-        end)
-
-        updateMethodUI_PC()
-
-        camApiPC = createToggleRow(aimPCContainer, "Camlock PC", 7, function(on)
-            Shared.Camlock = on
-            if on then
-                Load_Camlock()
-            else
-                Stop_Camlock_PC()
-            end
-            Shared.SaveConfig()
-        end)
-        ToggleAPIs.CamlockPC = camApiPC
-
-        aimMobileContainer = Instance.new("Frame")
-        aimMobileContainer.BackgroundTransparency = 1
-        aimMobileContainer.Size = UDim2.new(1, 0, 0, 0)
-        aimMobileContainer.AutomaticSize = Enum.AutomaticSize.Y
-        aimMobileContainer.ZIndex = 4
-        aimMobileContainer.LayoutOrder = 2
-        aimMobileContainer.Parent = innerFrame
-
-        local listM = Instance.new("UIListLayout", aimMobileContainer)
-        listM.FillDirection = Enum.FillDirection.Vertical
-        listM.SortOrder = Enum.SortOrder.LayoutOrder
-        listM.Padding = UDim.new(0, 6)
-
-        local silentApiMobile, camApiMobile
-        local methodContainerMobile, statusLabelMobile, fovBtnMobile, toggleBtnMobile
-
-        local function updateMethodUI_Mobile()
-            if not statusLabelMobile then return end
-            if Shared.SilentAimMethod == "MobileMethod" then
-                if fovBtnMobile then fovBtnMobile.BackgroundColor3 = THEME.MethodNone end
-                if toggleBtnMobile then toggleBtnMobile.BackgroundColor3 = THEME.MethodActive end
-                statusLabelMobile.Text = "Method: Toggle Button"
-                statusLabelMobile.TextColor3 = THEME.MethodActive
-            elseif Shared.SilentAimMethod == "FOV" then
-                if fovBtnMobile then fovBtnMobile.BackgroundColor3 = THEME.MethodActive end
-                if toggleBtnMobile then toggleBtnMobile.BackgroundColor3 = THEME.MethodNone end
-                statusLabelMobile.Text = "Method: FOV"
-                statusLabelMobile.TextColor3 = THEME.MethodActive
-            else
-                if fovBtnMobile then fovBtnMobile.BackgroundColor3 = THEME.MethodNone end
-                if toggleBtnMobile then toggleBtnMobile.BackgroundColor3 = THEME.MethodNone end
-                statusLabelMobile.Text = "Select method first!"
-                statusLabelMobile.TextColor3 = THEME.Warning
-            end
-        end
-
-        local function loadCurrentMethod_Mobile()
-            if Shared.SilentAimMethod == "MobileMethod" then
-                Load_SilentAim_Mobile_Remote()
-            elseif Shared.SilentAimMethod == "FOV" then
-                Load_SilentAim_FOV()
-            end
-        end
-
-        silentApiMobile = createToggleRow(aimMobileContainer, "Silent Aim Mobile", 2, function(on)
-            Shared.SilentAim = on
-            if on then
-                if Shared.SilentAimMethod ~= "MobileMethod" and Shared.SilentAimMethod ~= "FOV" then
-                    silentApiMobile.SetState(false)
-                    Shared.SilentAim = false
-                    replaySound(errorSound)
-                    shake(methodContainerMobile)
-                else
-                    loadCurrentMethod_Mobile()
-                end
-            else
-                if Shared.SilentAimMethod == "MobileMethod" then
-                    Stop_SilentAim_Mobile()
-                end
-            end
-            Shared.SaveConfig()
-        end)
-        ToggleAPIs.SilentAimMobile = silentApiMobile
-
-        local spacerM1 = Instance.new("Frame")
-        spacerM1.BackgroundTransparency = 1
-        spacerM1.Size = UDim2.new(1, 0, 0, 4)
-        spacerM1.LayoutOrder = 3
-        spacerM1.Parent = aimMobileContainer
-
-        methodContainerMobile = Instance.new("Frame")
-        methodContainerMobile.BackgroundColor3 = THEME.Card2
-        methodContainerMobile.BorderSizePixel = 0
-        methodContainerMobile.Size = UDim2.new(1, 0, 0, 70)
-        methodContainerMobile.ZIndex = 4
-        methodContainerMobile.LayoutOrder = 4
-        methodContainerMobile.Parent = aimMobileContainer
-        corner(methodContainerMobile, 12)
-        stroke(methodContainerMobile, THEME.Stroke1, 1.5, 0.2)
-        registerRowForAnimation(methodContainerMobile)
-
-        local titleLabelM = Instance.new("TextLabel")
-        titleLabelM.BackgroundTransparency = 1
-        titleLabelM.Position = UDim2.new(0, 12, 0, 8)
-        titleLabelM.Size = UDim2.new(0.5, -12, 0, 18)
-        titleLabelM.Font = Enum.Font.GothamBold
-        titleLabelM.Text = "Silent Aim Method"
-        titleLabelM.TextColor3 = THEME.Text
-        titleLabelM.TextSize = 13
-        titleLabelM.TextXAlignment = Enum.TextXAlignment.Left
-        titleLabelM.ZIndex = 5
-        titleLabelM.Parent = methodContainerMobile
-
-        statusLabelMobile = Instance.new("TextLabel")
-        statusLabelMobile.BackgroundTransparency = 1
-        statusLabelMobile.Position = UDim2.new(0.5, 0, 0, 8)
-        statusLabelMobile.Size = UDim2.new(0.5, -12, 0, 18)
-        statusLabelMobile.Font = Enum.Font.GothamSemibold
-        statusLabelMobile.Text = "Select method first!"
-        statusLabelMobile.TextColor3 = THEME.Warning
-        statusLabelMobile.TextSize = 11
-        statusLabelMobile.TextXAlignment = Enum.TextXAlignment.Right
-        statusLabelMobile.ZIndex = 5
-        statusLabelMobile.Parent = methodContainerMobile
-
-        local btnContainerM = Instance.new("Frame")
-        btnContainerM.BackgroundTransparency = 1
-        btnContainerM.Position = UDim2.new(0, 10, 0, 34)
-        btnContainerM.Size = UDim2.new(1, -20, 0, 28)
-        btnContainerM.ZIndex = 5
-        btnContainerM.Parent = methodContainerMobile
-
-        local btnLayoutM = Instance.new("UIListLayout", btnContainerM)
-        btnLayoutM.FillDirection = Enum.FillDirection.Horizontal
-        btnLayoutM.SortOrder = Enum.SortOrder.LayoutOrder
-        btnLayoutM.Padding = UDim.new(0, 10)
-        btnLayoutM.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-        fovBtnMobile = Instance.new("TextButton")
-        fovBtnMobile.BackgroundColor3 = THEME.MethodNone
-        fovBtnMobile.Size = UDim2.new(0.45, 0, 1, 0)
-        fovBtnMobile.Text = "FOV Method"
-        fovBtnMobile.Font = Enum.Font.GothamBold
-        fovBtnMobile.TextColor3 = THEME.Text
-        fovBtnMobile.TextSize = 12
-        fovBtnMobile.ZIndex = 6
-        fovBtnMobile.LayoutOrder = 1
-        fovBtnMobile.Parent = btnContainerM
-        corner(fovBtnMobile, 8)
-        addButtonSounds(fovBtnMobile)
-        fovBtnMobile.MouseButton1Click:Connect(function()
-            Shared.SilentAimMethod = "FOV"
-            updateMethodUI_Mobile()
-            if Shared.SilentAim then
-                Stop_SilentAim_Mobile()
-                Load_SilentAim_FOV()
-            end
-            Shared.SaveConfig()
-        end)
-
-        toggleBtnMobile = Instance.new("TextButton")
-        toggleBtnMobile.BackgroundColor3 = THEME.MethodNone
-        toggleBtnMobile.Size = UDim2.new(0.45, 0, 1, 0)
-        toggleBtnMobile.Text = "Toggle Button Method"
-        toggleBtnMobile.Font = Enum.Font.GothamBold
-        toggleBtnMobile.TextColor3 = THEME.Text
-        toggleBtnMobile.TextSize = 12
-        toggleBtnMobile.ZIndex = 6
-        toggleBtnMobile.LayoutOrder = 2
-        toggleBtnMobile.Parent = btnContainerM
-        corner(toggleBtnMobile, 8)
-        addButtonSounds(toggleBtnMobile)
-        toggleBtnMobile.MouseButton1Click:Connect(function()
-            Shared.SilentAimMethod = "MobileMethod"
-            updateMethodUI_Mobile()
-            if Shared.SilentAim then
-                Stop_SilentAim_Mobile()
-                Load_SilentAim_Mobile_Remote()
-            end
-            Shared.SaveConfig()
-        end)
-
-        updateMethodUI_Mobile()
-
-        camApiMobile = createToggleRow(aimMobileContainer, "Camlock Mobile", 7, function(on)
-            Shared.Camlock = on
-            if on then
-                Load_Camlock_Mobile()
-            else
-                Stop_Camlock_Mobile()
-            end
-            Shared.SaveConfig()
-        end)
-        ToggleAPIs.CamlockMobile = camApiMobile
-
-        RefreshAimPlatform = function()
-            if aimPCContainer and aimMobileContainer then
-                aimPCContainer.Visible = (Shared.Platform ~= "Mobile")
-                aimMobileContainer.Visible = (Shared.Platform == "Mobile")
-            end
-            updateMethodUI_PC()
-            updateMethodUI_Mobile()
-        end
-
-        RefreshAimPlatform()
-        return scroll
+        return api
     end
 
-    if name == "Target" then
-        local searchBoxTarget, statusLabel, avatarInner, nameBig, nameSmall
-        local function trunc(str, max) if not str then return "" end if #str <= max then return str end return string.sub(str, 1, max - 3) .. "..." end
-        local function findPlayer(query)
-            if not query or query == "" then return nil end
-            query = string.lower(query)
-            local best
-            for _, plr in ipairs(Players:GetPlayers()) do
-                if plr ~= lp then
-                    local un = string.lower(plr.Name)
-                    local dn = string.lower(plr.DisplayName or plr.Name)
-                    if un == query or dn == query then return plr end
-                    if (string.find(un, query, 1, true) or string.find(dn, query, 1, true)) and not best then best = plr end
-                end
-            end
-            return best
-        end
-        local function setTarget(plr)
-            if not plr then
-                Shared.TargetUsername = nil
-                if searchBoxTarget then searchBoxTarget.Text = "" end
-                if statusLabel then statusLabel.Text = "No target" end
-                if nameBig then nameBig.Text = "No Target" end
-                if nameSmall then nameSmall.Text = "@none" end
-                if avatarInner then avatarInner.Image = "" end
-                return
-            end
-            Shared.TargetUsername = plr.Name
-            local uname = plr.Name
-            local dname = plr.DisplayName or plr.Name
-            if searchBoxTarget then searchBoxTarget.Text = uname end
-            if statusLabel then statusLabel.Text = trunc(dname, 16) .. " [@" .. trunc(uname, 10) .. "]" end
-            if nameBig then nameBig.Text = trunc(dname, 18) end
-            if nameSmall then nameSmall.Text = "@" .. trunc(uname, 14) end
-            if avatarInner then
-                local ok2, img2 = pcall(function() return Players:GetUserThumbnailAsync(plr.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100) end)
-                if ok2 and img2 then avatarInner.Image = img2 end
-            end
-        end
-        local controlsRow = Instance.new("Frame")
-        controlsRow.BackgroundColor3 = THEME.Card
-        controlsRow.Size = UDim2.new(1, 0, 0, 36)
-        controlsRow.ZIndex = 4
-        controlsRow.LayoutOrder = 2
-        controlsRow.Parent = innerFrame
-        corner(controlsRow, 10)
-        stroke(controlsRow, THEME.Stroke2, 1, 0.35)
-        registerRowForAnimation(controlsRow)
-        local controlsLayout = Instance.new("UIListLayout", controlsRow)
-        controlsLayout.FillDirection = Enum.FillDirection.Horizontal
-        controlsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        controlsLayout.Padding = UDim.new(0, 4)
-        controlsLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-        padding(controlsRow, 6, 6, 0, 0)
-        local gotoBtn = Instance.new("TextButton")
-        gotoBtn.BackgroundColor3 = THEME.Card2
-        gotoBtn.Size = UDim2.new(0, 50, 0, 26)
-        gotoBtn.Text = "Goto"
-        gotoBtn.Font = Enum.Font.GothamBold
-        gotoBtn.TextColor3 = THEME.Text
-        gotoBtn.TextSize = 11
-        gotoBtn.ZIndex = 5
-        gotoBtn.LayoutOrder = 1
-        gotoBtn.Parent = controlsRow
-        corner(gotoBtn, 6)
-        addButtonSounds(gotoBtn)
-        gotoBtn.MouseButton1Click:Connect(function() Shared.GotoTarget = true Load_Target() end)
-        local function miniToggle(parent, txt, ord, cb)
-            local btn = Instance.new("TextButton")
-            btn.BackgroundColor3 = THEME.ToggleOff
-            btn.Size = UDim2.new(0, 60, 0, 26)
-            btn.Text = txt
-            btn.Font = Enum.Font.GothamBold
-            btn.TextColor3 = THEME.Text
-            btn.TextSize = 10
-            btn.ZIndex = 5
-            btn.LayoutOrder = ord
-            btn.Parent = parent
-            corner(btn, 6)
-            addButtonSounds(btn)
-            local state = false
-            local function refresh() btn.BackgroundColor3 = state and THEME.ToggleOn or THEME.ToggleOff end
-            local api = {}
-            function api.SetState(v) state = v and true or false refresh() end
-            function api.GetState() return state end
-            btn.MouseButton1Click:Connect(function()
-                state = not state
-                refresh()
-                if cb then task.spawn(function() cb(state) end) end
-                Shared.SaveConfig()
-            end)
-            return api
-        end
-        local viewApi = miniToggle(controlsRow, "View", 2, function(on) Shared.ViewTarget = on Load_Target() end)
-        local hlApi = miniToggle(controlsRow, "HL", 3, function(on) Shared.HighlightTarget = on Load_Target() end)
-        local katApi = miniToggle(controlsRow, "Katana", 4, function(on) Shared.AutoKatanaKill = on Load_Target() end)
-        local flingApi = miniToggle(controlsRow, "Fling", 5, function(on) Shared.Fling = on Load_Target() end)
-        ToggleAPIs.ViewTarget = viewApi
-        ToggleAPIs.HighlightTarget = hlApi
-        ToggleAPIs.AutoKatanaKill = katApi
-        ToggleAPIs.Fling = flingApi
-        local searchRow = Instance.new("Frame")
-        searchRow.BackgroundColor3 = THEME.Card
-        searchRow.Size = UDim2.new(1, 0, 0, 34)
-        searchRow.ZIndex = 4
-        searchRow.LayoutOrder = 3
-        searchRow.Parent = innerFrame
-        corner(searchRow, 10)
-        stroke(searchRow, THEME.Stroke2, 1, 0.35)
-        registerRowForAnimation(searchRow)
-        searchBoxTarget = Instance.new("TextBox")
-        searchBoxTarget.BackgroundTransparency = 1
-        searchBoxTarget.Position = UDim2.new(0, 10, 0, 0)
-        searchBoxTarget.Size = UDim2.new(1, -60, 1, 0)
-        searchBoxTarget.Font = Enum.Font.Gotham
-        searchBoxTarget.PlaceholderText = "Search player..."
-        searchBoxTarget.Text = ""
-        searchBoxTarget.TextColor3 = THEME.Text
-        searchBoxTarget.PlaceholderColor3 = THEME.SubText
-        searchBoxTarget.TextSize = 13
-        searchBoxTarget.ClearTextOnFocus = false
-        searchBoxTarget.ZIndex = 5
-        searchBoxTarget.Parent = searchRow
-        local searchGo = Instance.new("TextButton")
-        searchGo.BackgroundColor3 = THEME.Card2
-        searchGo.AnchorPoint = Vector2.new(1, 0.5)
-        searchGo.Position = UDim2.new(1, -6, 0.5, 0)
-        searchGo.Size = UDim2.new(0, 40, 0, 24)
-        searchGo.Font = Enum.Font.GothamBold
-        searchGo.Text = "GO"
-        searchGo.TextColor3 = THEME.Text
-        searchGo.TextSize = 11
-        searchGo.ZIndex = 5
-        searchGo.Parent = searchRow
-        corner(searchGo, 6)
-        addButtonSounds(searchGo)
-        local avatarCard = Instance.new("Frame")
-        avatarCard.BackgroundColor3 = THEME.Card
-        avatarCard.Size = UDim2.new(1, 0, 0, 56)
-        avatarCard.ZIndex = 4
-        avatarCard.LayoutOrder = 4
-        avatarCard.Parent = innerFrame
-        corner(avatarCard, 10)
-        stroke(avatarCard, THEME.Stroke2, 1, 0.35)
-        registerRowForAnimation(avatarCard)
-        avatarInner = Instance.new("ImageLabel")
-        avatarInner.BackgroundColor3 = THEME.BgMain
-        avatarInner.Size = UDim2.new(0, 44, 0, 44)
-        avatarInner.Position = UDim2.new(0, 6, 0.5, -22)
-        avatarInner.BorderSizePixel = 0
-        avatarInner.ZIndex = 5
-        avatarInner.Parent = avatarCard
-        corner(avatarInner, 999)
-        nameBig = Instance.new("TextLabel")
-        nameBig.BackgroundTransparency = 1
-        nameBig.Position = UDim2.new(0, 58, 0.5, -14)
-        nameBig.Size = UDim2.new(1, -66, 0, 16)
-        nameBig.Font = Enum.Font.GothamSemibold
-        nameBig.TextColor3 = THEME.Text
-        nameBig.TextSize = 14
-        nameBig.TextXAlignment = Enum.TextXAlignment.Left
-        nameBig.ZIndex = 5
-        nameBig.Text = "No Target"
-        nameBig.Parent = avatarCard
-        nameSmall = Instance.new("TextLabel")
-        nameSmall.BackgroundTransparency = 1
-        nameSmall.Position = UDim2.new(0, 58, 0.5, 4)
-        nameSmall.Size = UDim2.new(1, -66, 0, 14)
-        nameSmall.Font = Enum.Font.Gotham
-        nameSmall.TextColor3 = THEME.SubText
-        nameSmall.TextSize = 12
-        nameSmall.TextXAlignment = Enum.TextXAlignment.Left
-        nameSmall.ZIndex = 5
-        nameSmall.Text = "@none"
-        nameSmall.Parent = avatarCard
-        statusLabel = Instance.new("TextLabel")
-        statusLabel.BackgroundTransparency = 1
-        statusLabel.Size = UDim2.new(1, 0, 0, 18)
-        statusLabel.Font = Enum.Font.Gotham
-        statusLabel.TextColor3 = THEME.SubText
-        statusLabel.TextSize = 11
-        statusLabel.TextXAlignment = Enum.TextXAlignment.Left
-        statusLabel.ZIndex = 4
-        statusLabel.LayoutOrder = 5
-        statusLabel.Text = "No target"
-        statusLabel.Parent = innerFrame
-        registerRowForAnimation(statusLabel)
-        local copyRow = Instance.new("Frame")
-        copyRow.BackgroundTransparency = 1
-        copyRow.Size = UDim2.new(1, 0, 0, 28)
-        copyRow.ZIndex = 4
-        copyRow.LayoutOrder = 6
-        copyRow.Parent = innerFrame
-        registerRowForAnimation(copyRow)
-        local copyLayout = Instance.new("UIListLayout", copyRow)
-        copyLayout.FillDirection = Enum.FillDirection.Horizontal
-        copyLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        copyLayout.Padding = UDim.new(0, 6)
-        local function safeClipboard(text) if typeof(setclipboard) == "function" then pcall(setclipboard, text) end end
-        local copyUser = Instance.new("TextButton")
-        copyUser.BackgroundColor3 = THEME.Card2
-        copyUser.Size = UDim2.new(0.48, 0, 1, 0)
-        copyUser.Text = "Copy User"
-        copyUser.Font = Enum.Font.GothamSemibold
-        copyUser.TextColor3 = THEME.Text
-        copyUser.TextSize = 11
-        copyUser.ZIndex = 5
-        copyUser.LayoutOrder = 1
-        copyUser.Parent = copyRow
-        corner(copyUser, 6)
-        addButtonSounds(copyUser)
-        copyUser.MouseButton1Click:Connect(function() if Shared.TargetUsername then safeClipboard(Shared.TargetUsername) statusLabel.Text = "Copied!" end end)
-        local copyDisp = Instance.new("TextButton")
-        copyDisp.BackgroundColor3 = THEME.Card2
-        copyDisp.Size = UDim2.new(0.48, 0, 1, 0)
-        copyDisp.Text = "Copy Display"
-        copyDisp.Font = Enum.Font.GothamSemibold
-        copyDisp.TextColor3 = THEME.Text
-        copyDisp.TextSize = 11
-        copyDisp.ZIndex = 5
-        copyDisp.LayoutOrder = 2
-        copyDisp.Parent = copyRow
-        corner(copyDisp, 6)
-        addButtonSounds(copyDisp)
-        copyDisp.MouseButton1Click:Connect(function() local plr = Players:FindFirstChild(Shared.TargetUsername or "") if plr then safeClipboard(plr.DisplayName or plr.Name) statusLabel.Text = "Copied!" end end)
-        local function performSearch() local txt = searchBoxTarget.Text local plr = findPlayer(txt) if plr then setTarget(plr) else statusLabel.Text = "Not found: " .. txt end end
-        searchGo.MouseButton1Click:Connect(performSearch)
-        searchBoxTarget.FocusLost:Connect(function(enter) if enter then performSearch() end end)
-        setTarget(nil)
-        return scroll
+    local function CreateButton(text, callback)
+        local Btn = Instance.new("TextButton")
+        Btn.Size = scaleUDim(240, 30)
+        Btn.BackgroundColor3 = Theme.ToggleOff
+        Btn.Text = text
+        Btn.TextColor3 = Theme.Text
+        Btn.Font = Enum.Font.GothamBold
+        Btn.TextSize = scaleSize(12)
+        Btn.Parent = Scroll
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 6 * SCALE)
+        corner.Parent = Btn
+        
+        local Wrapper = Instance.new("Frame")
+        Wrapper.BackgroundTransparency = 1
+        Wrapper.Size = scaleUDim(260, 36)
+        Wrapper.Parent = Scroll
+        
+        Btn.Parent = Wrapper
+        Btn.Position = UDim2.new(0, 10 * SCALE, 0, 3 * SCALE)
+        
+        Btn.MouseButton1Click:Connect(function()
+            if callback then callback(Btn) end
+        end)
+        
+        return Btn
     end
 
-    if name == "Info" then
-        local infoText = Instance.new("TextLabel")
-        infoText.BackgroundColor3 = THEME.Card
-        infoText.Size = UDim2.new(1, 0, 0, 60)
-        infoText.Font = Enum.Font.Gotham
-        infoText.TextColor3 = THEME.Text
-        infoText.TextSize = 12
-        infoText.TextWrapped = true
-        infoText.TextXAlignment = Enum.TextXAlignment.Left
-        infoText.TextYAlignment = Enum.TextYAlignment.Top
-        infoText.ZIndex = 4
-        infoText.LayoutOrder = 2
-        infoText.Text = "Report bugs in my discord server. More features coming soon! This is beta."
-        infoText.Parent = innerFrame
-        corner(infoText, 10)
-        stroke(infoText, THEME.Stroke2, 1, 0.35)
-        padding(infoText, 10, 10, 10, 10)
-        registerRowForAnimation(infoText)
-        createActionButton(innerFrame, "Copy Discord Link", 3, function() if typeof(setclipboard) == "function" then pcall(setclipboard, DISCORD_INVITE) end end)
-        return scroll
+    CreateSection("MAIN SETTINGS")
+
+    CreateSwitch("Auto Armor", Shared.AutoArmor, function(s) 
+        Shared.AutoArmor = s 
+        if s then Load_AutoArmor() end 
+    end)
+
+    CreateSwitch("Staff Notifier", Shared.StaffNotifier, function(s) 
+        Shared.StaffNotifier = s 
+        if s then Load_StaffNotifier() end 
+    end)
+
+    CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s)
+        Shared.InstantStomp = s
+        if s then Load_InstantStomp() else Stop_InstantStomp() end
+    end)
+
+    CreateSwitch("Desync", Shared.Desync, function(s) Shared.Desync = s if s then Load_Desync() end end)
+    CreateSwitch("Disable Desync", Shared.DisableDesync, function(s) Shared.DisableDesync = s if s then Load_DisableDesync() end end)
+    CreateSwitch("FPS Boost", Shared.FpsBoost, function(s) Shared.FpsBoost = s if s then Load_FpsBoost() end end)
+    CreateSwitch("Auto Reload", Shared.AutoReload, function(s) Shared.AutoReload = s if s then Load_AutoReload_S() end end)
+
+    CreateSection("COMBAT / AIM")
+
+    local AimTog = CreateSwitch("Silent Aim", Shared.SilentAim, function(s)
+        Shared.SilentAim = s
+        if s then 
+            if not Shared.SilentAimMethod then Shared.SilentAimMethod = (Shared.Platform == "Mobile") and "MobileMethod" or "FOV" end
+            Load_SilentAim_ByMethod()
+        else
+            Stop_SilentAim_Mobile()
+        end
+    end)
+
+    local MethodFrame = Instance.new("Frame")
+    MethodFrame.Name = "MethodFrame"
+    MethodFrame.Size = scaleUDim(200, 120)
+    MethodFrame.Position = UDim2.new(0.5, -(100 * SCALE), 0.5, -(60 * SCALE))
+    MethodFrame.BackgroundColor3 = Theme.Background
+    MethodFrame.BorderSizePixel = 0
+    MethodFrame.Visible = false
+    MethodFrame.ZIndex = 20
+    MethodFrame.Parent = HubFrame
+    Instance.new("UICorner", MethodFrame).CornerRadius = UDim.new(0, 10 * SCALE)
+    local mfStroke = Instance.new("UIStroke")
+    mfStroke.Color = Theme.Accent
+    mfStroke.Thickness = 1 * SCALE
+    mfStroke.Parent = MethodFrame
+    local mfList = Instance.new("UIListLayout", MethodFrame)
+    mfList.Padding = UDim.new(0, 5 * SCALE)
+    mfList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    mfList.VerticalAlignment = Enum.VerticalAlignment.Center
+
+    local function addMethodBtn(name, id)
+        local b = Instance.new("TextButton")
+        b.Size = scaleUDim(180, 25)
+        b.BackgroundColor3 = Theme.ToggleOff
+        b.Text = name
+        b.TextColor3 = Theme.Text
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = scaleSize(11)
+        b.ZIndex = 21
+        b.Parent = MethodFrame
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6 * SCALE)
+        b.MouseButton1Click:Connect(function()
+            Shared.SilentAimMethod = id
+            MethodFrame.Visible = false
+            Shared.SaveConfig()
+            if Shared.SilentAim then
+                Stop_SilentAim_Mobile()
+                Load_SilentAim_ByMethod()
+            end
+        end)
     end
-    return scroll
-end
 
-for i, t in ipairs(tabs) do
-    local btn = Instance.new("TextButton")
-    btn.Name = t.id .. "_Tab"
-    btn.BackgroundColor3 = THEME.TabIdle
-    btn.BorderSizePixel = 0
-    btn.Size = UDim2.new(1, 0, 0, 32)
-    btn.Font = Enum.Font.GothamSemibold
-    btn.Text = "  " .. t.text
-    btn.TextColor3 = THEME.Text
-    btn.TextSize = 14
-    btn.TextXAlignment = Enum.TextXAlignment.Left
-    btn.LayoutOrder = i
-    btn.ZIndex = 4
-    btn.Parent = tabsContainer
-    corner(btn, 10)
-    addButtonSounds(btn)
-    tabButtons[t.id] = btn
-    tabFrames[t.id] = createTabFrame(t.id)
-end
+    addMethodBtn("FOV Method", "FOV")
+    addMethodBtn("Q Method", "QMethod")
+    addMethodBtn("Mobile Method", "MobileMethod")
 
-local function switchTab(id)
-    for name, frame in pairs(tabFrames) do frame.Visible = (name == id) end
-    for name, btn in pairs(tabButtons) do btn.BackgroundColor3 = (name == id) and THEME.TabActive or THEME.TabIdle end
-end
+    CreateButton("Select Method", function()
+        MethodFrame.Visible = not MethodFrame.Visible
+    end)
 
-for id, btn in pairs(tabButtons) do btn.MouseButton1Click:Connect(function() switchTab(id) end) end
-switchTab("Main")
+    CreateSwitch("Camlock", Shared.Camlock, function(s)
+        Shared.Camlock = s
+        if s then
+            if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
+        else
+            Stop_Camlock_PC()
+            Stop_Camlock_Mobile()
+        end
+    end)
 
-do
+    CreateSwitch("Triggerbot", Shared.TriggerBot, function(s) Shared.TriggerBot = s if s then Load_TriggerBot() end end)
+
+    CreateSection("TARGET")
+
+    local tBox = Instance.new("TextBox")
+    tBox.Size = scaleUDim(240, 30)
+    tBox.BackgroundColor3 = Theme.ToggleOff
+    tBox.Text = Shared.TargetUsername or "Target Name..."
+    tBox.TextColor3 = Theme.Text
+    tBox.Font = Enum.Font.GothamMedium
+    tBox.TextSize = scaleSize(12)
+    tBox.PlaceholderText = "Type Player Name"
+    local tWrap = Instance.new("Frame")
+    tWrap.BackgroundTransparency = 1
+    tWrap.Size = scaleUDim(260, 36)
+    tWrap.Parent = Scroll
+    tBox.Parent = tWrap
+    tBox.Position = UDim2.new(0, 10 * SCALE, 0, 3 * SCALE)
+    Instance.new("UICorner", tBox).CornerRadius = UDim.new(0, 6 * SCALE)
+
+    tBox.FocusLost:Connect(function()
+        local txt = tBox.Text
+        for _, p in pairs(Players:GetPlayers()) do
+            if string.find(string.lower(p.Name), string.lower(txt)) or string.find(string.lower(p.DisplayName), string.lower(txt)) then
+                Shared.TargetUsername = p.Name
+                tBox.Text = p.Name
+                break
+            end
+        end
+    end)
+
+    CreateSwitch("View Target", Shared.ViewTarget, function(s) Shared.ViewTarget = s Load_Target() end)
+    CreateSwitch("Highlight", Shared.HighlightTarget, function(s) Shared.HighlightTarget = s Load_Target() end)
+    CreateSwitch("Auto Katana", Shared.AutoKatanaKill, function(s) Shared.AutoKatanaKill = s Load_Target() end)
+    CreateButton("Teleport to Target", function() Shared.GotoTarget = true Load_Target() end)
+
+    CreateSection("SYSTEM")
+
+    local PlatRow = Instance.new("Frame")
+    PlatRow.BackgroundTransparency = 1
+    PlatRow.Size = scaleUDim(260, 36)
+    PlatRow.Parent = Scroll
+
+    local PCBtn = Instance.new("TextButton")
+    PCBtn.Size = UDim2.new(0.45, 0, 1, 0)
+    PCBtn.Position = UDim2.new(0, 10 * SCALE, 0, 0)
+    PCBtn.BackgroundColor3 = (Shared.Platform == "PC") and Theme.ToggleOn or Theme.ToggleOff
+    PCBtn.Text = "PC VERSION"
+    PCBtn.TextColor3 = Theme.Text
+    PCBtn.Font = Enum.Font.GothamBold
+    PCBtn.TextSize = scaleSize(10)
+    PCBtn.Parent = PlatRow
+    Instance.new("UICorner", PCBtn).CornerRadius = UDim.new(0, 6 * SCALE)
+
+    local MobBtn = Instance.new("TextButton")
+    MobBtn.Size = UDim2.new(0.45, 0, 1, 0)
+    MobBtn.Position = UDim2.new(0.5, 5 * SCALE, 0, 0)
+    MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.ToggleOn or Theme.ToggleOff
+    MobBtn.Text = "MOBILE VERSION"
+    MobBtn.TextColor3 = Theme.Text
+    MobBtn.Font = Enum.Font.GothamBold
+    MobBtn.TextSize = scaleSize(10)
+    MobBtn.Parent = PlatRow
+    Instance.new("UICorner", MobBtn).CornerRadius = UDim.new(0, 6 * SCALE)
+
+    local RestartLabel = Instance.new("TextLabel")
+    RestartLabel.Size = scaleUDim(260, 20)
+    RestartLabel.BackgroundTransparency = 1
+    RestartLabel.Text = "Click Restart to apply Platform Mode changes"
+    RestartLabel.TextColor3 = Theme.Accent
+    RestartLabel.Font = Enum.Font.GothamBold
+    RestartLabel.TextSize = scaleSize(9)
+    RestartLabel.Visible = false
+    RestartLabel.Parent = Scroll
+
+    local function updatePlatBtns()
+        PCBtn.BackgroundColor3 = (Shared.Platform == "PC") and Theme.ToggleOn or Theme.ToggleOff
+        MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.ToggleOn or Theme.ToggleOff
+        SubTitle.Text = "Type: " .. Shared.Platform .. " (developed by schmeckt)"
+        RestartLabel.Visible = true
+        Shared.SaveConfig()
+    end
+
+    PCBtn.MouseButton1Click:Connect(function()
+        Shared.Platform = "PC"
+        updatePlatBtns()
+    end)
+
+    MobBtn.MouseButton1Click:Connect(function()
+        Shared.Platform = "Mobile"
+        updatePlatBtns()
+    end)
+
+    CreateButton("Close GUI", function()
+        DisableAllScripts()
+        Shared.SaveConfig()
+        ScreenGui:Destroy()
+    end)
+
+    CreateButton("Restart GUI", function()
+        ScreenGui:Destroy()
+        Shared.SaveConfig()
+        MainUI() -- Reload UI immediately with new scale
+    end)
+
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + (50 * SCALE))
+    UIList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + (50 * SCALE))
+    end)
+
     local dragging, dragInput, dragStart, startPos
-    local function update(input)
-        local delta = input.Position - dragStart
-        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-    topBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true dragStart = input.Position startPos = main.Position input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end) end
+    HubFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = HubFrame.Position
+        end
     end)
-    topBar.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
-    UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
+    HubFrame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            HubFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
 end
 
-local minimized = false
-miniBtn.MouseButton1Click:Connect(function() minimized = not minimized if minimized then inner.Visible = false main.Size = UDim2.new(NORMAL_SIZE.X.Scale, NORMAL_SIZE.X.Offset, 0, 74) else inner.Visible = true main.Size = NORMAL_SIZE end end)
-closeBtn.MouseButton1Click:Connect(function()
-    DisableAllScripts()
-    Stop_InstantStomp()
-    gui:Destroy()
-end)
+-- Init UI
+MainUI()
 
 task.defer(function()
-    if ToggleAPIs.AutoArmor then ToggleAPIs.AutoArmor.SetState(Shared.AutoArmor) end
-    if ToggleAPIs.StaffNotifier then ToggleAPIs.StaffNotifier.SetState(Shared.StaffNotifier) end
-    if ToggleAPIs.InstantStomp then ToggleAPIs.InstantStomp.SetState(Shared.InstantStomp) end
-    if ToggleAPIs.Desync then ToggleAPIs.Desync.SetState(Shared.Desync) end
-    if ToggleAPIs.DisableDesync then ToggleAPIs.DisableDesync.SetState(Shared.DisableDesync) end
-    if ToggleAPIs.FpsBoost then ToggleAPIs.FpsBoost.SetState(Shared.FpsBoost) end
-    if ToggleAPIs.PlayerPanel then ToggleAPIs.PlayerPanel.SetState(Shared.PlayerPanel) end
-    if ToggleAPIs.AutoReload then ToggleAPIs.AutoReload.SetState(Shared.AutoReload) end
-    if ToggleAPIs.DragShoot then ToggleAPIs.DragShoot.SetState(Shared.DragShoot) end
-    if ToggleAPIs.TriggerBot then ToggleAPIs.TriggerBot.SetState(Shared.TriggerBot) end
-    if ToggleAPIs.CamlockPC then ToggleAPIs.CamlockPC.SetState(Shared.Camlock and Shared.Platform ~= "Mobile") end
-    if ToggleAPIs.CamlockMobile then ToggleAPIs.CamlockMobile.SetState(Shared.Camlock and Shared.Platform == "Mobile") end
-    if ToggleAPIs.SilentAimPC then ToggleAPIs.SilentAimPC.SetState(Shared.SilentAim and (Shared.Platform ~= "Mobile")) end
-    if ToggleAPIs.SilentAimMobile then ToggleAPIs.SilentAimMobile.SetState(Shared.SilentAim and (Shared.Platform == "Mobile")) end
-
+    if Shared.InstantStomp then Load_InstantStomp() end
     if Shared.AutoArmor then Load_AutoArmor() end
-    if Shared.StaffNotifier then Load_StaffNotifier() end
-
-    -- START ODER STOP BEIM LOAD
-    if Shared.InstantStomp then
-        Load_InstantStomp()
-    else
-        Stop_InstantStomp()
-    end
-
     if Shared.Desync then Load_Desync() end
-    if Shared.DisableDesync then Load_DisableDesync() end
-    if Shared.FpsBoost then Load_FpsBoost() end
-    if Shared.PlayerPanel then Load_PlayerPanel() end
-    if Shared.AutoReload then Load_AutoReload_S() end
-    if Shared.DragShoot then Load_DragShoot() end
-    if Shared.TriggerBot then Load_TriggerBot() end
-    if Shared.Camlock then if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end end
-    if Shared.SilentAim then
-        if not Shared.SilentAimMethod then
-            Shared.SilentAimMethod = (Shared.Platform == "Mobile") and "MobileMethod" or "FOV"
-        end
-        Load_SilentAim_ByMethod()
-    else
-        Stop_SilentAim_Mobile()
-    end
-    RefreshAimPlatform()
-end)
-
-task.spawn(function()
-    while not getgenv().SchmecktIntroFinished do task.wait() end
-    local openSound = Instance.new("Sound")
-    openSound.SoundId = GUI_OPEN_SOUND
-    openSound.Volume = 2
-    openSound.Parent = SoundService
-    openSound:Play()
-    task.delay(3, function() openSound:Destroy() end)
-    main.Size = UDim2.new(0, 0, 0, 0)
-    main.Visible = true
-    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = NORMAL_SIZE}):Play()
-    task.wait(0.5)
-    for i, row in ipairs(allRows) do
-        task.delay(i * 0.04, function()
-            if not row or not row.Parent then return end
-            if row:IsA("Frame") then TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}):Play()
-            elseif row:IsA("TextButton") then TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
-            elseif row:IsA("TextLabel") then TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play() end
-            for _, child in ipairs(row:GetDescendants()) do
-                if child:IsA("TextLabel") then TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}):Play()
-                elseif child:IsA("TextButton") then TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0, TextTransparency = 0}):Play()
-                elseif child:IsA("ImageLabel") then TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}):Play() end
-            end
-        end)
+    if Shared.SilentAim then Load_SilentAim_ByMethod() end
+    if Shared.Camlock then 
+        if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end 
     end
 end)
