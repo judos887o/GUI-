@@ -36,6 +36,7 @@ Shared.GotoTarget = Shared.GotoTarget or false
 Shared.InstantStomp = Shared.InstantStomp or false
 Shared.OPKill = Shared.OPKill or false
 Shared.Aura = Shared.Aura or false
+Shared.AntiFling = Shared.AntiFling or false
 Shared.Platform = Shared.Platform or "PC"
 
 Shared.Connections = Shared.Connections or {}
@@ -67,6 +68,7 @@ local function serializeConfig()
             InstantStomp = Shared.InstantStomp,
             OPKill = Shared.OPKill,
             Aura = Shared.Aura,
+            AntiFling = Shared.AntiFling,
         }
     }
 end
@@ -135,6 +137,7 @@ local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos88
 local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/refs/heads/main/teat") end
 local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/refs/heads/main/teat") end
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/refs/heads/main/teats") end
+local function Load_AntiFling() safeLoad("https://raw.githubusercontent.com/judos887o/ANTI-FL/refs/heads/main/te") end
 
 local function Stop_InstantStomp()
     local S = getgenv().SchmecktHubPC
@@ -159,6 +162,11 @@ end
 local function Stop_Camlock_Mobile()
     local M = getgenv().SchmecktHubMobile
     if M and M._CamlockGUI then pcall(function() M._CamlockGUI:Destroy() end) M._CamlockGUI = nil end
+end
+
+local function Stop_AntiFling_External()
+
+    Shared.AntiFling = false
 end
 
 local function Load_SilentAim_ByMethod()
@@ -187,11 +195,13 @@ local function DisableAllScripts()
     Shared.InstantStomp = false
     Shared.OPKill = false
     Shared.Aura = false
+    Shared.AntiFling = false
     
     Stop_InstantStomp()
     Stop_SilentAim_Mobile()
     Stop_Camlock_PC()
     Stop_Camlock_Mobile()
+    Stop_AntiFling_External()
 end
 
 local function MainUI()
@@ -476,6 +486,11 @@ local function MainUI()
         if s then Load_PlayerPanel() end 
     end)
 
+    CreateSwitch("Anti Fling", Shared.AntiFling, function(s)
+        Shared.AntiFling = s
+        if s then Load_AntiFling() end 
+    end)
+
     CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s)
         Shared.InstantStomp = s
         if s then Load_InstantStomp() else Stop_InstantStomp() end
@@ -668,7 +683,7 @@ local function MainUI()
     CreateButton("Restart GUI", function()
         ScreenGui:Destroy()
         Shared.SaveConfig()
-        MainUI() -- Reload UI immediately with new scale
+        MainUI()
     end)
 
     Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + (50 * SCALE))
@@ -712,4 +727,5 @@ task.defer(function()
     if Shared.Camlock then 
         if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end 
     end
+    if Shared.AntiFling then Load_AntiFling() end
 end)
