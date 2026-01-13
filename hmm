@@ -130,7 +130,6 @@ local function Load_FpsBoost() safeLoad("https://raw.githubusercontent.com/judos
 local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/target-schmeckt/refs/heads/main/teat") end
 local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/refs/heads/main/teat") end
 local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/refs/heads/main/teat") end
-
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/refs/heads/main/teats") end
 
 local function Stop_InstantStomp()
@@ -466,6 +465,11 @@ local function MainUI()
         if s then Load_StaffNotifier() end 
     end)
 
+    CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) 
+        Shared.PlayerPanel = s 
+        if s then Load_PlayerPanel() end 
+    end)
+
     CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s)
         Shared.InstantStomp = s
         if s then Load_InstantStomp() else Stop_InstantStomp() end
@@ -549,6 +553,11 @@ local function MainUI()
 
     CreateSwitch("Triggerbot", Shared.TriggerBot, function(s) Shared.TriggerBot = s if s then Load_TriggerBot() end end)
 
+    CreateSwitch("Drag Shoot", Shared.DragShoot, function(s) 
+        Shared.DragShoot = s 
+        if s then Load_DragShoot() end 
+    end)
+
     CreateSection("TARGET")
 
     local tBox = Instance.new("TextBox")
@@ -581,6 +590,7 @@ local function MainUI()
     CreateSwitch("View Target", Shared.ViewTarget, function(s) Shared.ViewTarget = s Load_Target() end)
     CreateSwitch("Highlight", Shared.HighlightTarget, function(s) Shared.HighlightTarget = s Load_Target() end)
     CreateSwitch("Auto Katana", Shared.AutoKatanaKill, function(s) Shared.AutoKatanaKill = s Load_Target() end)
+    CreateSwitch("Fling Target", Shared.Fling, function(s) Shared.Fling = s Load_Target() end)
     CreateButton("Teleport to Target", function() Shared.GotoTarget = true Load_Target() end)
 
     CreateSection("SYSTEM")
