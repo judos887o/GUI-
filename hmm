@@ -7,6 +7,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 
+-- Altes GUI entfernen, falls vorhanden
 local old = CoreGui:FindFirstChild("SchmecktHub")
 if old then old:Destroy() end
 
@@ -15,6 +16,7 @@ local DISCORD_INVITE = "https://discord.gg/RCpsTAAsrN"
 local INTRO_LOGO_ASSET = "rbxassetid://121759217057084"
 local GUI_OPEN_SOUND = "rbxassetid://1862043663"
 
+-- THEME SETTINGS
 local THEME = {
     BgMain    = Color3.fromRGB(90, 0, 0),
     BgTop     = Color3.fromRGB(140, 0, 0),
@@ -36,6 +38,7 @@ local THEME = {
     Warning   = Color3.fromRGB(255, 180, 50),
 }
 
+-- GLOBAL SHARED TABLE SETUP
 getgenv().SchmecktHubPC = getgenv().SchmecktHubPC or {}
 local Shared = getgenv().SchmecktHubPC
 
@@ -63,6 +66,7 @@ Shared.Platform = Shared.Platform or "PC"
 
 Shared.Connections = Shared.Connections or {}
 
+-- CONFIG SYSTEM
 local CONFIG_DIR = "SchmecktHub"
 local CONFIG_FILE = CONFIG_DIR .. "/config.json"
 local FS_OK = (typeof(isfile) == "function" and typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(makefolder) == "function" and typeof(isfolder) == "function")
@@ -142,6 +146,7 @@ local function safeLoad(url, key)
     end)
 end
 
+-- SCRIPT LOADERS
 local function Load_AutoArmor() safeLoad("https://raw.githubusercontent.com/judos887o/auto-armor/refs/heads/main/ar", "AutoArmor") end
 local function Load_StaffNotifier() safeLoad("https://raw.githubusercontent.com/judos887o/staff-notifie/refs/heads/main/a", "StaffNotifier") end
 local function Load_TriggerBot() safeLoad("https://raw.githubusercontent.com/judos887o/TRIGGERBOT-pc/refs/heads/main/trigger", "TriggerBot") end
@@ -155,9 +160,51 @@ local function Load_Desync() safeLoad("https://raw.githubusercontent.com/judos88
 local function Load_DisableDesync() safeLoad("https://raw.githubusercontent.com/judos887o/disdes/refs/heads/main/teat", "DisableDesync") end
 local function Load_FpsBoost() safeLoad("https://raw.githubusercontent.com/judos887o/fps-nuke/refs/heads/main/teat", "FpsBoost") end
 local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/target-schmeckt/refs/heads/main/teat", "Target") end
-local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/refs/heads/main/teats", "InstantStomp") end
 local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/refs/heads/main/teat", "SilentAim_Mobile") end
 local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/refs/heads/main/teat", "Camlock_Mobile") end
+
+-- ============================================================================
+-- FIX: INSTANT STOMP STOP FUNCTION (VERBESSERT)
+-- ============================================================================
+local function Load_InstantStomp()
+    -- Lädt dein Instant Stomp Script
+    safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/refs/heads/main/teats", "InstantStomp")
+end
+
+local function Stop_InstantStomp()
+    -- 1. Versuche die offizielle Cleanup-Funktion vom Stomp Script
+    local S = getgenv().SchmecktHubPC
+    if S and S.InstantStomp_Destroy then 
+        pcall(S.InstantStomp_Destroy)
+        S.InstantStomp_Destroy = nil -- Reset variable
+    end
+
+    -- 2. Fallback: Manuelles Aufräumen, falls das Script hängt oder Variable fehlt
+    -- a) Connections löschen (Loop stoppen)
+    if S and S.Connections then
+        local keysToClear = {"InstantStompCore", "InstantStompUI"}
+        for _, key in ipairs(keysToClear) do
+            if S.Connections[key] then
+                for _, c in pairs(S.Connections[key]) do pcall(function() c:Disconnect() end) end
+                S.Connections[key] = nil
+            end
+        end
+    end
+
+    -- b) UI manuell löschen (falls Destroy Funktion versagt hat)
+    local uiName = "Schmeckt_InstantStomp_UI"
+    local g = CoreGui:FindFirstChild(uiName)
+    if g then g:Destroy() end
+    if lp and lp:FindFirstChild("PlayerGui") then
+        local pgUI = lp.PlayerGui:FindFirstChild(uiName)
+        if pgUI then pgUI:Destroy() end
+    end
+
+    -- c) Ring/Part manuell löschen
+    local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring")
+    if ring then ring:Destroy() end
+end
+-- ============================================================================
 
 local function Stop_SilentAim_Mobile()
     local Mobile = getgenv().SchmecktHubMobile
@@ -209,8 +256,10 @@ local function DisableAllScripts()
     Stop_SilentAim_Mobile()
     Stop_Camlock_PC()
     Stop_Camlock_Mobile()
+    Stop_InstantStomp() -- Ruft die verbesserte Stop-Funktion auf
 end
 
+-- UI HELPERS
 local function corner(inst, px)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, px or 10)
@@ -237,6 +286,7 @@ local function padding(inst, l, r, t, b)
     return p
 end
 
+-- SOUNDS
 local clickSound = Instance.new("Sound")
 clickSound.SoundId = "rbxassetid://15675059323"
 clickSound.Volume = 1.4
@@ -258,6 +308,7 @@ local function addButtonSounds(btn)
     btn.MouseEnter:Connect(function() replaySound(hoverSound) end)
 end
 
+-- UI CREATION
 local allRows = {}
 local allScrollFrames = {}
 local ToggleAPIs = {}
@@ -697,6 +748,7 @@ resetBtn.MouseButton1Click:Connect(function()
     Stop_SilentAim_Mobile()
     Stop_Camlock_PC()
     Stop_Camlock_Mobile()
+    Stop_InstantStomp()
     Shared.SilentAimMethod = nil
     Shared.Platform = "PC"
     Shared.SaveConfig()
@@ -861,7 +913,17 @@ local function createTabFrame(name)
     if name == "Main" then
         ToggleAPIs.AutoArmor = createToggleRow(innerFrame, "Auto Armor [PC]", 2, function(on) Shared.AutoArmor = on if on then Load_AutoArmor() end end)
         ToggleAPIs.StaffNotifier = createToggleRow(innerFrame, "Staff Notifier [PC]", 3, function(on) Shared.StaffNotifier = on if on then Load_StaffNotifier() end end)
-        ToggleAPIs.InstantStomp = createToggleRow(innerFrame, "Instant Stomp", 4, function(on) Shared.InstantStomp = on if on then Load_InstantStomp() end end)
+
+        ToggleAPIs.InstantStomp = createToggleRow(innerFrame, "Instant Stomp", 4, function(on)
+            Shared.InstantStomp = on
+            if on then
+                Load_InstantStomp()
+            else
+                Stop_InstantStomp()
+            end
+            Shared.SaveConfig()
+        end)
+
         ToggleAPIs.Desync = createToggleRow(innerFrame, "Desync", 5, function(on) Shared.Desync = on if on then Load_Desync() end end)
         ToggleAPIs.DisableDesync = createToggleRow(innerFrame, "Disable Desync", 6, function(on) Shared.DisableDesync = on if on then Load_DisableDesync() end end)
         ToggleAPIs.FpsBoost = createToggleRow(innerFrame, "Fps Boost", 7, function(on) Shared.FpsBoost = on if on then Load_FpsBoost() end end)
@@ -1552,7 +1614,11 @@ end
 
 local minimized = false
 miniBtn.MouseButton1Click:Connect(function() minimized = not minimized if minimized then inner.Visible = false main.Size = UDim2.new(NORMAL_SIZE.X.Scale, NORMAL_SIZE.X.Offset, 0, 74) else inner.Visible = true main.Size = NORMAL_SIZE end end)
-closeBtn.MouseButton1Click:Connect(function() DisableAllScripts() gui:Destroy() end)
+closeBtn.MouseButton1Click:Connect(function()
+    DisableAllScripts()
+    Stop_InstantStomp()
+    gui:Destroy()
+end)
 
 task.defer(function()
     if ToggleAPIs.AutoArmor then ToggleAPIs.AutoArmor.SetState(Shared.AutoArmor) end
@@ -1572,7 +1638,14 @@ task.defer(function()
 
     if Shared.AutoArmor then Load_AutoArmor() end
     if Shared.StaffNotifier then Load_StaffNotifier() end
-    if Shared.InstantStomp then Load_InstantStomp() end
+
+    -- START ODER STOP BEIM LOAD
+    if Shared.InstantStomp then
+        Load_InstantStomp()
+    else
+        Stop_InstantStomp()
+    end
+
     if Shared.Desync then Load_Desync() end
     if Shared.DisableDesync then Load_DisableDesync() end
     if Shared.FpsBoost then Load_FpsBoost() end
