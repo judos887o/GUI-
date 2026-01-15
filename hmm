@@ -9,7 +9,7 @@ local HttpService = game:GetService("HttpService")
 local Stats = game:GetService("Stats")
 
 local lp = Players.LocalPlayer
-local LOGO_ASSET = "rbxassetid://121759217057084" 
+local LOGO_ASSET = "rbxassetid://121759217057084"
 
 getgenv().SchmecktHubPC = getgenv().SchmecktHubPC or {}
 local Shared = getgenv().SchmecktHubPC
@@ -38,7 +38,6 @@ Shared.OPKill = Shared.OPKill or false
 Shared.Aura = Shared.Aura or false
 Shared.AntiFling = Shared.AntiFling or false
 Shared.Platform = Shared.Platform or "PC"
-
 Shared.Connections = Shared.Connections or {}
 
 local CONFIG_DIR = "SchmecktHub"
@@ -83,20 +82,19 @@ local function applyConfig(cfg)
             Shared[k] = v
         end
     end
-    if Shared.Platform == "Mobile" and (Shared.SilentAimMethod ~= "FOV" and Shared.SilentAimMethod ~= "MobileMethod") then
-        Shared.SilentAimMethod = "MobileMethod"
-    end
 end
 
 function Shared.SaveConfig()
-    pcall(function()
-        local json = HttpService:JSONEncode(serializeConfig())
-        if FS_OK then
-            if not isfolder(CONFIG_DIR) then makefolder(CONFIG_DIR) end
-            writefile(CONFIG_FILE, json)
-        else
-            getgenv()._SchmecktLastCfg = json
-        end
+    task.spawn(function()
+        pcall(function()
+            local json = HttpService:JSONEncode(serializeConfig())
+            if FS_OK then
+                if not isfolder(CONFIG_DIR) then makefolder(CONFIG_DIR) end
+                writefile(CONFIG_FILE, json)
+            else
+                getgenv()._SchmecktLastCfg = json
+            end
+        end)
     end)
 end
 
@@ -121,23 +119,23 @@ local function safeLoad(url)
     end)
 end
 
-local function Load_AutoArmor() safeLoad("https://raw.githubusercontent.com/judos887o/auto-armor/refs/heads/main/ar") end
-local function Load_StaffNotifier() safeLoad("https://raw.githubusercontent.com/judos887o/staff-notifie/refs/heads/main/a") end
-local function Load_TriggerBot() safeLoad("https://raw.githubusercontent.com/judos887o/TRIGGERBOT-pc/refs/heads/main/trigger") end
-local function Load_Camlock() safeLoad("https://raw.githubusercontent.com/judos887o/camlock-pc/refs/heads/main/camlcok") end
-local function Load_SilentAim_FOV() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-FOV-METHOD/refs/heads/main/teat") end
-local function Load_SilentAim_QMethod() safeLoad("https://raw.githubusercontent.com/judos887o/Silent-Aim/refs/heads/main/silent") end
-local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/refs/heads/main/teat") end
-local function Load_AutoReload_S() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/refs/heads/main/teat") end
-local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/refs/heads/main/teat") end
-local function Load_Desync() safeLoad("https://raw.githubusercontent.com/judos887o/desync-schmeckt/refs/heads/main/teat") end
-local function Load_DisableDesync() safeLoad("https://raw.githubusercontent.com/judos887o/disdes/refs/heads/main/teat") end
-local function Load_FpsBoost() safeLoad("https://raw.githubusercontent.com/judos887o/fps-nuke/refs/heads/main/teat") end
-local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/target-schmeckt/refs/heads/main/teat") end
-local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/refs/heads/main/teat") end
-local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/refs/heads/main/teat") end
-local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/refs/heads/main/teats") end
-local function Load_AntiFling() safeLoad("https://raw.githubusercontent.com/judos887o/ANTI-FL/refs/heads/main/te") end
+local function Load_AutoArmor() safeLoad("https://raw.githubusercontent.com/judos887o/auto-armor/main/ar") end
+local function Load_StaffNotifier() safeLoad("https://raw.githubusercontent.com/judos887o/staff-notifie/main/a") end
+local function Load_TriggerBot() safeLoad("https://raw.githubusercontent.com/judos887o/TRIGGERBOT-pc/main/trigger") end
+local function Load_Camlock() safeLoad("https://raw.githubusercontent.com/judos887o/camlock-pc/main/camlcok") end
+local function Load_SilentAim_FOV() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-FOV-METHOD/main/teat") end
+local function Load_SilentAim_QMethod() safeLoad("https://raw.githubusercontent.com/judos887o/Silent-Aim/main/silent") end
+local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/main/teat") end
+local function Load_AutoReload_S() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/main/teat") end
+local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/main/teat") end
+local function Load_Desync() safeLoad("https://raw.githubusercontent.com/judos887o/desync-schmeckt/main/teat") end
+local function Load_DisableDesync() safeLoad("https://raw.githubusercontent.com/judos887o/disdes/main/teat") end
+local function Load_FpsBoost() safeLoad("https://raw.githubusercontent.com/judos887o/fps-nuke/main/teat") end
+local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/target-schmeckt/main/teat") end
+local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/main/teat") end
+local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/main/teat") end
+local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/main/teats") end
+local function Load_AntiFling() safeLoad("https://raw.githubusercontent.com/judos887o/ANTI-FL/main/te") end
 
 local function Stop_InstantStomp()
     local S = getgenv().SchmecktHubPC
@@ -150,9 +148,23 @@ local function Stop_InstantStomp()
     local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring") if ring then ring:Destroy() end
 end
 
-local function Stop_SilentAim_Mobile()
-    local Mobile = getgenv().SchmecktHubMobile
-    if Mobile and Mobile._MobileGUI then pcall(function() Mobile._MobileGUI:Destroy() end) Mobile._MobileGUI = nil end
+local function Stop_SilentAim_All()
+    if getgenv().SilentAim_Q_Destroy then pcall(getgenv().SilentAim_Q_Destroy) end
+    if getgenv().SilentAim_FOV_Destroy then pcall(getgenv().SilentAim_FOV_Destroy) end
+    if Shared and Shared.Connections then
+        for key, list in pairs(Shared.Connections) do
+            if tostring(key):lower():find("silent") then
+                for _, c in ipairs(list) do pcall(function() c:Disconnect() end) end
+                Shared.Connections[key] = nil
+            end
+        end
+    end
+    local kill = {"Schmeckt_SilentAim_UI","Schmeckt_SilentAim_FOV_UI","SchmecktSilentAim","SilentStatusQ"}
+    for _, n in ipairs(kill) do local g = CoreGui:FindFirstChild(n) if g then g:Destroy() end end
+    if lp and lp:FindFirstChild("PlayerGui") then
+        local pg = lp.PlayerGui
+        for _, n in ipairs(kill) do local g2 = pg:FindFirstChild(n) if g2 then g2:Destroy() end end
+    end
 end
 
 local function Stop_Camlock_PC()
@@ -165,14 +177,14 @@ local function Stop_Camlock_Mobile()
 end
 
 local function Stop_AntiFling_External()
-
     Shared.AntiFling = false
 end
 
 local function Load_SilentAim_ByMethod()
-    if Shared.SilentAimMethod == "FOV" then Load_SilentAim_FOV()
-    elseif Shared.SilentAimMethod == "QMethod" then Load_SilentAim_QMethod()
-    elseif Shared.SilentAimMethod == "MobileMethod" then Load_SilentAim_Mobile_Remote() end
+    local m = Shared.SilentAimMethod
+    if m == "QMethod" then Stop_SilentAim_All() Load_SilentAim_QMethod() return end
+    if m == "FOV" then Stop_SilentAim_All() Load_SilentAim_FOV() return end
+    if m == "MobileMethod" then Stop_SilentAim_All() Load_SilentAim_Mobile_Remote() return end
 end
 
 local function DisableAllScripts()
@@ -196,16 +208,14 @@ local function DisableAllScripts()
     Shared.OPKill = false
     Shared.Aura = false
     Shared.AntiFling = false
-    
     Stop_InstantStomp()
-    Stop_SilentAim_Mobile()
+    Stop_SilentAim_All()
     Stop_Camlock_PC()
     Stop_Camlock_Mobile()
     Stop_AntiFling_External()
 end
 
 local function MainUI()
-
     if CoreGui:FindFirstChild("SchmecktUI") then CoreGui.SchmecktUI:Destroy() end
 
     local SCALE = 1
@@ -229,29 +239,18 @@ local function MainUI()
         Stroke = Color3.fromRGB(80, 0, 0)
     }
 
-    local function scaleUDim(x, y)
-        return UDim2.new(0, x * SCALE, 0, y * SCALE)
-    end
-    local function scaleSize(s)
-        return math.floor(s * SCALE)
-    end
+    local function scaleUDim(x, y) return UDim2.new(0, x * SCALE, 0, y * SCALE) end
+    local function scaleSize(s) return math.floor(s * SCALE) end
 
     local BottomBar = Instance.new("Frame")
     BottomBar.Name = "BottomBar"
     BottomBar.Size = scaleUDim(500, 55)
-    BottomBar.Position = UDim2.new(0.5, -(250 * SCALE), 1, -(70 * SCALE)) 
+    BottomBar.Position = UDim2.new(0.5, -(250 * SCALE), 1, -(70 * SCALE))
     BottomBar.BackgroundColor3 = Theme.Background
     BottomBar.BorderSizePixel = 0
     BottomBar.Parent = ScreenGui
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 10 * SCALE)
-    UICorner.Parent = BottomBar
-
-    local UIStroke = Instance.new("UIStroke")
-    UIStroke.Color = Theme.Stroke
-    UIStroke.Thickness = 1 * SCALE
-    UIStroke.Parent = BottomBar
+    local UICorner = Instance.new("UICorner"); UICorner.CornerRadius = UDim.new(0, 10 * SCALE); UICorner.Parent = BottomBar
+    local UIStroke = Instance.new("UIStroke"); UIStroke.Color = Theme.Stroke; UIStroke.Thickness = 1 * SCALE; UIStroke.Parent = BottomBar
 
     local Logo = Instance.new("ImageLabel")
     Logo.Name = "Logo"
@@ -286,14 +285,6 @@ local function MainUI()
     SubTitle.TextXAlignment = Enum.TextXAlignment.Left
     SubTitle.Parent = BottomBar
 
-    local Divider = Instance.new("Frame")
-    Divider.Name = "Divider"
-    Divider.Size = UDim2.new(0, 1, 0, 30 * SCALE)
-    Divider.Position = UDim2.new(0, 350 * SCALE, 0.5, -(15 * SCALE))
-    Divider.BackgroundColor3 = Theme.Stroke
-    Divider.BorderSizePixel = 0
-    Divider.Parent = BottomBar
-
     local StatsLabel = Instance.new("TextLabel")
     StatsLabel.Name = "Stats"
     StatsLabel.Size = UDim2.new(0, 140 * SCALE, 1, 0)
@@ -307,33 +298,27 @@ local function MainUI()
     StatsLabel.Parent = BottomBar
 
     task.spawn(function()
-        while BottomBar.Parent do
+        while ScreenGui.Parent do
             local fps = math.floor(1 / (RunService.RenderStepped:Wait() + 0.001))
             local ping = 0
             pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-            StatsLabel.Text = "FPS: " .. fps .. "\nPing: " .. ping .. "ms"
-            task.wait(0.5)
+            if StatsLabel and StatsLabel.Parent then
+                StatsLabel.Text = "FPS: " .. fps .. "\nPing: " .. ping .. "ms"
+            end
+            task.wait(1)
         end
     end)
 
     local HubFrame = Instance.new("Frame")
     HubFrame.Name = "HubFrame"
-    HubFrame.Size = scaleUDim(260, 420) 
+    HubFrame.Size = scaleUDim(260, 420)
     HubFrame.Position = UDim2.new(1, -(280 * SCALE), 0.5, -(210 * SCALE))
     HubFrame.BackgroundColor3 = Color3.fromRGB(15, 5, 5)
     HubFrame.BackgroundTransparency = 0.05
     HubFrame.BorderSizePixel = 0
     HubFrame.Parent = ScreenGui
-
-    local HubCorner = Instance.new("UICorner")
-    HubCorner.CornerRadius = UDim.new(0, 12 * SCALE)
-    HubCorner.Parent = HubFrame
-
-    local HubStroke = Instance.new("UIStroke")
-    HubStroke.Color = Theme.Accent
-    HubStroke.Transparency = 0.5
-    HubStroke.Thickness = 1.5 * SCALE
-    HubStroke.Parent = HubFrame
+    local HubCorner = Instance.new("UICorner"); HubCorner.CornerRadius = UDim.new(0, 12 * SCALE); HubCorner.Parent = HubFrame
+    local HubStroke = Instance.new("UIStroke"); HubStroke.Color = Theme.Accent; HubStroke.Transparency = 0.5; HubStroke.Thickness = 1.5 * SCALE; HubStroke.Parent = HubFrame
 
     local HeaderText = Instance.new("TextLabel")
     HeaderText.Size = UDim2.new(1, -(24 * SCALE), 0, 30 * SCALE)
@@ -381,7 +366,7 @@ local function MainUI()
         Button.BackgroundTransparency = 1
         Button.Text = ""
         Button.Parent = Scroll
-        
+
         local Label = Instance.new("TextLabel")
         Label.Size = UDim2.new(1, -(60 * SCALE), 1, 0)
         Label.Position = UDim2.new(0, 15 * SCALE, 0, 0)
@@ -392,18 +377,18 @@ local function MainUI()
         Label.TextColor3 = Theme.Text
         Label.TextXAlignment = Enum.TextXAlignment.Left
         Label.Parent = Button
-        
+
         local SwitchBg = Instance.new("Frame")
         SwitchBg.Size = scaleUDim(36, 20)
         SwitchBg.Position = UDim2.new(1, -(50 * SCALE), 0.5, -(10 * SCALE))
         SwitchBg.BackgroundColor3 = default and Theme.ToggleOn or Theme.ToggleOff
         SwitchBg.BorderSizePixel = 0
         SwitchBg.Parent = Button
-        
+
         local SwCorner = Instance.new("UICorner")
         SwCorner.CornerRadius = UDim.new(1, 0)
         SwCorner.Parent = SwitchBg
-        
+
         local Circle = Instance.new("Frame")
         Circle.Size = scaleUDim(16, 16)
         local startX = default and (18 * SCALE) or (2 * SCALE)
@@ -411,32 +396,29 @@ local function MainUI()
         Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         Circle.BorderSizePixel = 0
         Circle.Parent = SwitchBg
-        
+
         local CCorner = Instance.new("UICorner")
         CCorner.CornerRadius = UDim.new(1, 0)
         CCorner.Parent = Circle
-        
+
         local enabled = default
-        
+
         local function update()
             local targetX = enabled and (18 * SCALE) or (2 * SCALE)
             local targetColor = enabled and Theme.ToggleOn or Theme.ToggleOff
             TweenService:Create(Circle, TweenInfo.new(0.2), {Position = UDim2.new(0, targetX, 0.5, -(8 * SCALE))}):Play()
             TweenService:Create(SwitchBg, TweenInfo.new(0.2), {BackgroundColor3 = targetColor}):Play()
         end
-        
+
         Button.MouseButton1Click:Connect(function()
             enabled = not enabled
             update()
             if callback then callback(enabled) end
             Shared.SaveConfig()
         end)
-        
+
         local api = {}
-        function api.Set(val)
-            enabled = val
-            update()
-        end
+        function api.Set(val) enabled = val update() end
         return api
     end
 
@@ -449,53 +431,19 @@ local function MainUI()
         Btn.Font = Enum.Font.GothamBold
         Btn.TextSize = scaleSize(12)
         Btn.Parent = Scroll
-        
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 6 * SCALE)
-        corner.Parent = Btn
-        
-        local Wrapper = Instance.new("Frame")
-        Wrapper.BackgroundTransparency = 1
-        Wrapper.Size = scaleUDim(260, 36)
-        Wrapper.Parent = Scroll
-        
-        Btn.Parent = Wrapper
-        Btn.Position = UDim2.new(0, 10 * SCALE, 0, 3 * SCALE)
-        
-        Btn.MouseButton1Click:Connect(function()
-            if callback then callback(Btn) end
-        end)
-        
+        local corner = Instance.new("UICorner"); corner.CornerRadius = UDim.new(0, 6 * SCALE); corner.Parent = Btn
+        local Wrapper = Instance.new("Frame"); Wrapper.BackgroundTransparency = 1; Wrapper.Size = scaleUDim(260, 36); Wrapper.Parent = Scroll
+        Btn.Parent = Wrapper; Btn.Position = UDim2.new(0, 10 * SCALE, 0, 3 * SCALE)
+        Btn.MouseButton1Click:Connect(function() if callback then callback(Btn) end end)
         return Btn
     end
 
     CreateSection("MAIN SETTINGS")
-
-    CreateSwitch("Auto Armor", Shared.AutoArmor, function(s) 
-        Shared.AutoArmor = s 
-        if s then Load_AutoArmor() end 
-    end)
-
-    CreateSwitch("Staff Notifier", Shared.StaffNotifier, function(s) 
-        Shared.StaffNotifier = s 
-        if s then Load_StaffNotifier() end 
-    end)
-
-    CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) 
-        Shared.PlayerPanel = s 
-        if s then Load_PlayerPanel() end 
-    end)
-
-    CreateSwitch("Anti Fling", Shared.AntiFling, function(s)
-        Shared.AntiFling = s
-        if s then Load_AntiFling() end 
-    end)
-
-    CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s)
-        Shared.InstantStomp = s
-        if s then Load_InstantStomp() else Stop_InstantStomp() end
-    end)
-
+    CreateSwitch("Auto Armor", Shared.AutoArmor, function(s) Shared.AutoArmor = s if s then Load_AutoArmor() end end)
+    CreateSwitch("Staff Notifier", Shared.StaffNotifier, function(s) Shared.StaffNotifier = s if s then Load_StaffNotifier() end end)
+    CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) Shared.PlayerPanel = s if s then Load_PlayerPanel() end end)
+    CreateSwitch("Anti Fling", Shared.AntiFling, function(s) Shared.AntiFling = s if s then Load_AntiFling() end end)
+    CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s) Shared.InstantStomp = s if s then Load_InstantStomp() else Stop_InstantStomp() end end)
     CreateSwitch("Desync", Shared.Desync, function(s) Shared.Desync = s if s then Load_Desync() end end)
     CreateSwitch("Disable Desync", Shared.DisableDesync, function(s) Shared.DisableDesync = s if s then Load_DisableDesync() end end)
     CreateSwitch("FPS Boost", Shared.FpsBoost, function(s) Shared.FpsBoost = s if s then Load_FpsBoost() end end)
@@ -503,63 +451,166 @@ local function MainUI()
 
     CreateSection("COMBAT / AIM")
 
-    local AimTog = CreateSwitch("Silent Aim", Shared.SilentAim, function(s)
-        Shared.SilentAim = s
-        if s then 
-            if not Shared.SilentAimMethod then Shared.SilentAimMethod = (Shared.Platform == "Mobile") and "MobileMethod" or "FOV" end
+    local AimWarnLabel = Instance.new("TextLabel")
+    AimWarnLabel.Size = scaleUDim(260, 18)
+    AimWarnLabel.BackgroundTransparency = 1
+    AimWarnLabel.Text = ""
+    AimWarnLabel.TextColor3 = Color3.fromRGB(220, 0, 0)
+    AimWarnLabel.Font = Enum.Font.GothamBold
+    AimWarnLabel.TextSize = scaleSize(9)
+    AimWarnLabel.Visible = false
+    AimWarnLabel.Parent = Scroll
+
+    local function FlashAimWarn(txt)
+        AimWarnLabel.Text = txt
+        AimWarnLabel.Visible = true
+        task.delay(2.2, function() if AimWarnLabel then AimWarnLabel.Visible = false end end)
+    end
+
+    local AimSwitch
+    AimSwitch = CreateSwitch("Silent Aim", Shared.SilentAim, function(s)
+        if s then
+            if not Shared.SilentAimMethod then
+                FlashAimWarn("Please select a Silent Aim Method first!")
+                Shared.SilentAim = false
+                AimSwitch.Set(false)
+                return
+            end
+            if Shared.Platform == "PC" and Shared.SilentAimMethod == "MobileMethod" then
+                FlashAimWarn("Mobile Method not available on PC!")
+                Shared.SilentAim = false
+                AimSwitch.Set(false)
+                return
+            end
+            Shared.SilentAim = true
             Load_SilentAim_ByMethod()
         else
-            Stop_SilentAim_Mobile()
+            Shared.SilentAim = false
+            Stop_SilentAim_All()
         end
     end)
 
-    local MethodFrame = Instance.new("Frame")
-    MethodFrame.Name = "MethodFrame"
-    MethodFrame.Size = scaleUDim(200, 120)
-    MethodFrame.Position = UDim2.new(0.5, -(100 * SCALE), 0.5, -(60 * SCALE))
-    MethodFrame.BackgroundColor3 = Theme.Background
-    MethodFrame.BorderSizePixel = 0
-    MethodFrame.Visible = false
-    MethodFrame.ZIndex = 20
-    MethodFrame.Parent = HubFrame
-    Instance.new("UICorner", MethodFrame).CornerRadius = UDim.new(0, 10 * SCALE)
-    local mfStroke = Instance.new("UIStroke")
-    mfStroke.Color = Theme.Accent
-    mfStroke.Thickness = 1 * SCALE
-    mfStroke.Parent = MethodFrame
-    local mfList = Instance.new("UIListLayout", MethodFrame)
-    mfList.Padding = UDim.new(0, 5 * SCALE)
-    mfList.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    mfList.VerticalAlignment = Enum.VerticalAlignment.Center
+    local SilentAimMethodRow = Instance.new("Frame")
+    SilentAimMethodRow.BackgroundTransparency = 1
+    SilentAimMethodRow.Size = scaleUDim(260, 36)
+    SilentAimMethodRow.Parent = Scroll
 
-    local function addMethodBtn(name, id)
-        local b = Instance.new("TextButton")
-        b.Size = scaleUDim(180, 25)
-        b.BackgroundColor3 = Theme.ToggleOff
-        b.Text = name
-        b.TextColor3 = Theme.Text
-        b.Font = Enum.Font.GothamBold
-        b.TextSize = scaleSize(11)
-        b.ZIndex = 21
-        b.Parent = MethodFrame
-        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6 * SCALE)
-        b.MouseButton1Click:Connect(function()
-            Shared.SilentAimMethod = id
-            MethodFrame.Visible = false
-            Shared.SaveConfig()
-            if Shared.SilentAim then
-                Stop_SilentAim_Mobile()
-                Load_SilentAim_ByMethod()
+    local FOVBtn = Instance.new("TextButton")
+    FOVBtn.Size = UDim2.new(0.45, 0, 1, 0)
+    FOVBtn.Position = UDim2.new(0, 10 * SCALE, 0, 0)
+    FOVBtn.BackgroundColor3 = Color3.fromRGB(45, 10, 10)
+    FOVBtn.Text = "Silent Aim FOV Method"
+    FOVBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    FOVBtn.Font = Enum.Font.GothamBold
+    FOVBtn.TextSize = scaleSize(10)
+    FOVBtn.Parent = SilentAimMethodRow
+    Instance.new("UICorner", FOVBtn).CornerRadius = UDim.new(0, 6 * SCALE)
+
+    local QBtn = Instance.new("TextButton")
+    QBtn.Size = UDim2.new(0.45, 0, 1, 0)
+    QBtn.Position = UDim2.new(0.5, 5 * SCALE, 0, 0)
+    QBtn.BackgroundColor3 = Color3.fromRGB(45, 10, 10)
+    QBtn.Text = "Silent Aim Q Method"
+    QBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    QBtn.Font = Enum.Font.GothamBold
+    QBtn.TextSize = scaleSize(10)
+    QBtn.Parent = SilentAimMethodRow
+    Instance.new("UICorner", QBtn).CornerRadius = UDim.new(0, 6 * SCALE)
+
+    local MobileBtn = Instance.new("TextButton")
+    MobileBtn.Size = UDim2.new(0.93, 0, 1, 0)
+    MobileBtn.Position = UDim2.new(0, 10 * SCALE, 0, 0)
+    MobileBtn.BackgroundColor3 = Color3.fromRGB(45, 10, 10)
+    MobileBtn.Text = "Silent Aim Mobile Method"
+    MobileBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    MobileBtn.Font = Enum.Font.GothamBold
+    MobileBtn.TextSize = scaleSize(10)
+    MobileBtn.Parent = SilentAimMethodRow
+    Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(0, 6 * SCALE)
+
+    local function updateMethodButtons()
+        local on = Color3.fromRGB(200, 0, 0)
+        local off = Color3.fromRGB(45, 10, 10)
+        FOVBtn.BackgroundColor3 = (Shared.SilentAimMethod == "FOV") and on or off
+        QBtn.BackgroundColor3 = (Shared.SilentAimMethod == "QMethod") and on or off
+        MobileBtn.BackgroundColor3 = (Shared.SilentAimMethod == "MobileMethod") and on or off
+        if Shared.Platform == "PC" then
+            FOVBtn.Visible = true
+            QBtn.Visible = true
+            MobileBtn.Visible = false
+            if Shared.SilentAimMethod == "MobileMethod" then
+                Shared.SilentAimMethod = nil
+                if Shared.SilentAim then Shared.SilentAim = false AimSwitch.Set(false) Stop_SilentAim_All() FlashAimWarn("Mobile Method not available on PC!") end
             end
-        end)
+        else
+            FOVBtn.Visible = false
+            QBtn.Visible = false
+            MobileBtn.Visible = true
+            if Shared.SilentAimMethod ~= "MobileMethod" then
+                Shared.SilentAimMethod = nil
+                if Shared.SilentAim then Shared.SilentAim = false AimSwitch.Set(false) Stop_SilentAim_All() FlashAimWarn("Select Mobile Method") end
+            end
+        end
     end
 
-    addMethodBtn("FOV Method", "FOV")
-    addMethodBtn("Q Method", "QMethod")
-    addMethodBtn("Mobile Method", "MobileMethod")
+    FOVBtn.MouseButton1Click:Connect(function()
+        if Shared.Platform ~= "PC" then return end
+        if Shared.SilentAimMethod == "FOV" then
+            Shared.SilentAimMethod = nil
+            if Shared.SilentAim then Shared.SilentAim = false AimSwitch.Set(false) end
+            Stop_SilentAim_All()
+            updateMethodButtons()
+            Shared.SaveConfig()
+            return
+        end
+        local wasOn = Shared.SilentAim
+        Shared.SilentAimMethod = "FOV"
+        Shared.SaveConfig()
+        updateMethodButtons()
+        if wasOn then
+            Stop_SilentAim_All()
+            Load_SilentAim_ByMethod()
+        end
+    end)
 
-    CreateButton("Select Method", function()
-        MethodFrame.Visible = not MethodFrame.Visible
+    QBtn.MouseButton1Click:Connect(function()
+        if Shared.Platform ~= "PC" then return end
+        if Shared.SilentAimMethod == "QMethod" then
+            Shared.SilentAimMethod = nil
+            if Shared.SilentAim then Shared.SilentAim = false AimSwitch.Set(false) end
+            Stop_SilentAim_All()
+            updateMethodButtons()
+            Shared.SaveConfig()
+            return
+        end
+        local wasOn = Shared.SilentAim
+        Shared.SilentAimMethod = "QMethod"
+        Shared.SaveConfig()
+        updateMethodButtons()
+        if wasOn then
+            Stop_SilentAim_All()
+            Load_SilentAim_ByMethod()
+        end
+    end)
+
+    MobileBtn.MouseButton1Click:Connect(function()
+        if Shared.Platform ~= "Mobile" then return end
+        if Shared.SilentAimMethod == "MobileMethod" then
+            Shared.SilentAimMethod = nil
+            if Shared.SilentAim then Shared.SilentAim = false AimSwitch.Set(false) end
+            Stop_SilentAim_All()
+            updateMethodButtons()
+            Shared.SaveConfig()
+            return
+        end
+        local wasOn = Shared.SilentAim
+        Shared.SilentAimMethod = "MobileMethod"
+        Shared.SaveConfig()
+        updateMethodButtons()
+        if wasOn then
+            Stop_SilentAim_All()
+            Load_SilentAim_ByMethod()
+        end
     end)
 
     CreateSwitch("Camlock", Shared.Camlock, function(s)
@@ -573,11 +624,7 @@ local function MainUI()
     end)
 
     CreateSwitch("Triggerbot", Shared.TriggerBot, function(s) Shared.TriggerBot = s if s then Load_TriggerBot() end end)
-
-    CreateSwitch("Drag Shoot", Shared.DragShoot, function(s) 
-        Shared.DragShoot = s 
-        if s then Load_DragShoot() end 
-    end)
+    CreateSwitch("Drag Shoot", Shared.DragShoot, function(s) Shared.DragShoot = s if s then Load_DragShoot() end end)
 
     CreateSection("TARGET")
 
@@ -614,7 +661,6 @@ local function MainUI()
     CreateSwitch("Fling Target", Shared.Fling, function(s) Shared.Fling = s Load_Target() end)
     CreateSwitch("OP Kill", Shared.OPKill, function(s) Shared.OPKill = s Load_Target() end)
     CreateSwitch("Aura", Shared.Aura, function(s) Shared.Aura = s Load_Target() end)
-    
     CreateButton("Teleport to Target", function() Shared.GotoTarget = true Load_Target() end)
 
     CreateSection("SYSTEM")
@@ -661,18 +707,12 @@ local function MainUI()
         MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.ToggleOn or Theme.ToggleOff
         SubTitle.Text = "Type: " .. Shared.Platform .. " (developed by schmeckt)"
         RestartLabel.Visible = true
+        updateMethodButtons()
         Shared.SaveConfig()
     end
 
-    PCBtn.MouseButton1Click:Connect(function()
-        Shared.Platform = "PC"
-        updatePlatBtns()
-    end)
-
-    MobBtn.MouseButton1Click:Connect(function()
-        Shared.Platform = "Mobile"
-        updatePlatBtns()
-    end)
+    PCBtn.MouseButton1Click:Connect(function() Shared.Platform = "PC" updatePlatBtns() end)
+    MobBtn.MouseButton1Click:Connect(function() Shared.Platform = "Mobile" updatePlatBtns() end)
 
     CreateButton("Close GUI", function()
         DisableAllScripts()
@@ -686,9 +726,10 @@ local function MainUI()
         MainUI()
     end)
 
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + (50 * SCALE))
-    UIList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList.AbsoluteContentSize.Y + (50 * SCALE))
+    local UIList2 = Scroll:FindFirstChildOfClass("UIListLayout")
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (50 * SCALE))
+    UIList2:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (50 * SCALE))
     end)
 
     local dragging, dragInput, dragStart, startPos
@@ -715,6 +756,8 @@ local function MainUI()
             dragging = false
         end
     end)
+
+    updateMethodButtons()
 end
 
 MainUI()
@@ -723,9 +766,11 @@ task.defer(function()
     if Shared.InstantStomp then Load_InstantStomp() end
     if Shared.AutoArmor then Load_AutoArmor() end
     if Shared.Desync then Load_Desync() end
-    if Shared.SilentAim then Load_SilentAim_ByMethod() end
-    if Shared.Camlock then 
-        if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end 
-    end
+    if Shared.SilentAim and Shared.SilentAimMethod then Load_SilentAim_ByMethod() end
+    if Shared.TriggerBot then Load_TriggerBot() end
+    if Shared.StaffNotifier then Load_StaffNotifier() end
+    if Shared.FpsBoost then Load_FpsBoost() end
+    if Shared.PlayerPanel then Load_PlayerPanel() end
+    if Shared.Camlock then if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end end
     if Shared.AntiFling then Load_AntiFling() end
 end)
