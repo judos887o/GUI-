@@ -39,6 +39,7 @@ Shared.Aura = Shared.Aura or false
 Shared.AntiFling = Shared.AntiFling or false
 Shared.Platform = Shared.Platform or "PC"
 Shared.Connections = Shared.Connections or {}
+Shared.ShadowPepperUsers = Shared.ShadowPepperUsers or {}
 
 local CONFIG_DIR = "SchmecktHub"
 local CONFIG_FILE = CONFIG_DIR .. "/config.json"
@@ -141,6 +142,7 @@ local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubuserco
 local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/main/teat") end
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/main/teats") end
 local function Load_AntiFling() safeLoad("https://raw.githubusercontent.com/judos887o/ANTI-FL/main/te") end
+local function Load_ShadowPepperUsers() safeLoad("https://raw.githubusercontent.com/judos887o/user/refs/heads/main/a") end
 
 local function Stop_InstantStomp()
     local S = getgenv().SchmecktHubPC
@@ -428,7 +430,6 @@ local function MainUI()
         end
     end)
 
-    -- Hub Frame Shadow (NOCH WEITER NACH OBEN - 3 studs mehr = ca. 120 pixel)
     local HubFrameShadow = Instance.new("Frame")
     HubFrameShadow.Name = "HubFrameShadow"
     HubFrameShadow.Size = scaleUDim(275, 440)
@@ -439,7 +440,6 @@ local function MainUI()
     HubFrameShadow.Parent = ScreenGui
     Instance.new("UICorner", HubFrameShadow).CornerRadius = UDim.new(0, 16 * SCALE)
 
-    -- Hub Frame (NOCH WEITER NACH OBEN)
     local HubFrame = Instance.new("Frame")
     HubFrame.Name = "HubFrame"
     HubFrame.Size = scaleUDim(265, 430)
@@ -981,6 +981,7 @@ local function MainUI()
 end
 
 MainUI()
+Load_ShadowPepperUsers()
 
 task.defer(function()
     if Shared.InstantStomp then Load_InstantStomp() end
