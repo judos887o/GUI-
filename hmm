@@ -21,7 +21,7 @@ Shared.TriggerBot = Shared.TriggerBot or false
 Shared.Camlock = Shared.Camlock or false
 Shared.SilentAim = Shared.SilentAim or false
 Shared.SilentAimMethod = Shared.SilentAimMethod
-Shared.Desync = Shared.Desync or false
+Shared.Desync = false -- HARTE INITIALISIERUNG AUF FALSE
 Shared.DisableDesync = Shared.DisableDesync or false
 Shared.FpsBoost = Shared.FpsBoost or false
 Shared.AutoReload = Shared.AutoReload or false
@@ -55,7 +55,6 @@ local function serializeConfig()
             TriggerBot = Shared.TriggerBot,
             Camlock = Shared.Camlock,
             SilentAim = Shared.SilentAim,
-            Desync = Shared.Desync,
             DisableDesync = Shared.DisableDesync,
             FpsBoost = Shared.FpsBoost,
             AutoReload = Shared.AutoReload,
@@ -79,7 +78,7 @@ local function applyConfig(cfg)
     Shared.SilentAimMethod = cfg.SilentAimMethod
     local T = cfg.Toggles or {}
     for k, v in pairs(T) do
-        if type(v) == "boolean" and Shared[k] ~= nil then
+        if k ~= "Desync" and type(v) == "boolean" and Shared[k] ~= nil then
             Shared[k] = v
         end
     end
@@ -117,7 +116,7 @@ LoadConfig()
 local function safeLoad(url)
     task.spawn(function()
         local success, content = pcall(function() return game:HttpGet(url, true) end)
-        if not success then return end -- Silent fail on 404 to avoid console spam if link is dead
+        if not success then return end
         local func, err = loadstring(content)
         if func then pcall(func) end
     end)
@@ -727,13 +726,9 @@ local function MainUI()
     local MobStroke = Instance.new("UIStroke"); MobStroke.Color = Theme.Stroke; MobStroke.Thickness = 1; MobStroke.Parent = MobileBtn
 
     local function updateMethodButtons()
-        local on = Theme.Accent
-        local off = Theme.Card
-
-        FOVBtn.BackgroundColor3 = (Shared.SilentAimMethod == "FOV") and on or off
-        QBtn.BackgroundColor3 = (Shared.SilentAimMethod == "QMethod") and on or off
-        MobileBtn.BackgroundColor3 = (Shared.SilentAimMethod == "MobileMethod") and on or off
-
+        FOVBtn.BackgroundColor3 = (Shared.SilentAimMethod == "FOV") and Theme.Accent or Theme.Card
+        QBtn.BackgroundColor3 = (Shared.SilentAimMethod == "QMethod") and Theme.Accent or Theme.Card
+        MobileBtn.BackgroundColor3 = (Shared.SilentAimMethod == "MobileMethod") and Theme.Accent or Theme.Card
         if Shared.Platform == "PC" then
             FOVBtn.Visible = true
             QBtn.Visible = true
