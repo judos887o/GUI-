@@ -1,4 +1,5 @@
 local TweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
@@ -9,6 +10,7 @@ local Stats = game:GetService("Stats")
 
 local lp = Players.LocalPlayer
 local LOGO_ASSET = "rbxassetid://121759217057084"
+local LOGO2_ASSET = "rbxassetid://118676632373972"
 
 getgenv().SchmecktHubPC = getgenv().SchmecktHubPC or {}
 local Shared = getgenv().SchmecktHubPC
@@ -20,9 +22,6 @@ Shared.TriggerBot = Shared.TriggerBot or false
 Shared.Camlock = Shared.Camlock or false
 Shared.SilentAim = Shared.SilentAim or false
 Shared.SilentAimMethod = Shared.SilentAimMethod
-Shared.Desync = Shared.Desync or false
-Shared.DisableDesync = Shared.DisableDesync or false
-Shared.FpsBoost = Shared.FpsBoost or false
 Shared.AutoReload = Shared.AutoReload or false
 Shared.PlayerPanel = Shared.PlayerPanel or false
 Shared.DragShoot = Shared.DragShoot or false
@@ -48,15 +47,12 @@ local function serializeConfig()
     return {
         Platform = Shared.Platform,
         SilentAimMethod = Shared.SilentAimMethod,
-        TargetUsername = Shared.TargetUsername,
         Toggles = {
             AutoArmor = Shared.AutoArmor,
             StaffNotifier = Shared.StaffNotifier,
             TriggerBot = Shared.TriggerBot,
             Camlock = Shared.Camlock,
             SilentAim = Shared.SilentAim,
-            DisableDesync = Shared.DisableDesync,
-            FpsBoost = Shared.FpsBoost,
             AutoReload = Shared.AutoReload,
             PlayerPanel = Shared.PlayerPanel,
             DragShoot = Shared.DragShoot,
@@ -76,7 +72,6 @@ local function applyConfig(cfg)
     if not cfg then return end
     Shared.Platform = cfg.Platform or Shared.Platform
     Shared.SilentAimMethod = cfg.SilentAimMethod
-    Shared.TargetUsername = cfg.TargetUsername
     local T = cfg.Toggles or {}
     for k, v in pairs(T) do
         if type(v) == "boolean" and Shared[k] ~= nil then
@@ -132,9 +127,7 @@ local function Load_Internal_Q_Method() safeLoad("https://raw.githubusercontent.
 local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/main/teat") end
 local function Load_AutoReload_S() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/main/teat") end
 local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/main/teat") end
-local function Load_Desync() safeLoad("https://raw.githubusercontent.com/judos887o/desync-schmeckt/main/teat") end
-local function Load_DisableDesync() safeLoad("https://raw.githubusercontent.com/judos887o/disdes/main/teat") end
-local function Load_FpsBoost() safeLoad("https://raw.githubusercontent.com/judos887o/fps-nuke/main/teat") end
+local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/targer/refs/heads/main/asd") end 
 local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/main/teat") end
 local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/main/teat") end
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/main/teats") end
@@ -145,10 +138,16 @@ local function Stop_InstantStomp()
     local S = getgenv().SchmecktHubPC
     if S and S.InstantStomp_Destroy then pcall(S.InstantStomp_Destroy) S.InstantStomp_Destroy = nil end
     if S and S.Connections then
-        if S.Connections["InstantStompCore"] then for _, c in pairs(S.Connections["InstantStompCore"]) do pcall(function() c:Disconnect() end) end S.Connections["InstantStompCore"] = nil end
+        if S.Connections["InstantStompCore"] then 
+            for _, c in pairs(S.Connections["InstantStompCore"]) do pcall(function() c:Disconnect() end) end 
+            S.Connections["InstantStompCore"] = nil 
+        end
     end
     local g = CoreGui:FindFirstChild("Schmeckt_InstantStomp_UI") if g then g:Destroy() end
-    if lp and lp:FindFirstChild("PlayerGui") then local pgUI = lp.PlayerGui:FindFirstChild("Schmeckt_InstantStomp_UI") if pgUI then pgUI:Destroy() end end
+    if lp and lp:FindFirstChild("PlayerGui") then 
+        local pgUI = lp.PlayerGui:FindFirstChild("Schmeckt_InstantStomp_UI") 
+        if pgUI then pgUI:Destroy() end 
+    end
     local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring") if ring then ring:Destroy() end
 end
 
@@ -158,6 +157,7 @@ local function EnableSilentAimFlags()
     getgenv().SilentAim = true
     getgenv().SchmecktSilentAim = true
     getgenv().SilentAimActive = true
+    
     if Shared.SilentAimMethod == "FOV" then
         getgenv().SilentAimFOV = true
         getgenv().FOVSilentAim = true
@@ -179,16 +179,23 @@ local function DisableSilentAimFlags()
     getgenv().SilentAimActive = false
     getgenv().FOVSilentAim = false
     getgenv().QMethodSilentAim = false
+    
     local Mobile = getgenv().SchmecktHubMobile
     if Mobile then Mobile.SilentAim = false end
 end
 
 local function CleanupSilentAim()
     DisableSilentAimFlags()
-    local destroyFuncs = {"SilentAim_Q_Destroy", "SilentAim_FOV_Destroy", "DisableSilentAim", "StopSilentAim", "SilentAimDestroy", "DestroySilentAim", "SilentAim_Destroy", "FOV_Destroy", "Q_Destroy"}
+    
+    local destroyFuncs = {
+        "SilentAim_Q_Destroy", "SilentAim_FOV_Destroy", "DisableSilentAim", "StopSilentAim",
+        "SilentAimDestroy", "DestroySilentAim", "SilentAim_Destroy", "FOV_Destroy", "Q_Destroy"
+    }
+    
     for _, funcName in ipairs(destroyFuncs) do
         if getgenv()[funcName] then pcall(getgenv()[funcName]) getgenv()[funcName] = nil end
     end
+    
     if Shared and Shared.Connections then
         for key, list in pairs(Shared.Connections) do
             local keyLower = tostring(key):lower()
@@ -202,20 +209,24 @@ local function CleanupSilentAim()
             end
         end
     end
+    
     local connectionNames = {"SilentAimConnection", "SilentAimRender", "SilentAimLoop", "FOVConnection", "FOVRender", "QMethodConnection", "SilentRenderStep", "SilentHeartbeat"}
     for _, connName in ipairs(connectionNames) do
         if getgenv()[connName] then pcall(function() getgenv()[connName]:Disconnect() end) getgenv()[connName] = nil end
     end
+    
     local uiNames = {"Schmeckt_SilentAim_UI", "Schmeckt_SilentAim_FOV_UI", "SchmecktSilentAim", "SilentStatusQ", "SilentAimUI", "SilentAimFOV", "SilentAimGUI", "FOVCircleGUI", "SilentAim_GUI", "Silent_Aim_UI"}
     for _, n in ipairs(uiNames) do local g = CoreGui:FindFirstChild(n) if g then pcall(function() g:Destroy() end) end end
     if lp and lp:FindFirstChild("PlayerGui") then
         local pg = lp.PlayerGui
         for _, n in ipairs(uiNames) do local g2 = pg:FindFirstChild(n) if g2 then pcall(function() g2:Destroy() end) end end
     end
+    
     local drawingNames = {"SilentAimFOVCircle", "FOVCircle", "AimCircle", "SilentCircle"}
     for _, drawName in ipairs(drawingNames) do
         if getgenv()[drawName] then pcall(function() getgenv()[drawName]:Remove() end) getgenv()[drawName] = nil end
     end
+    
     local Mobile = getgenv().SchmecktHubMobile
     if Mobile and Mobile._MobileGUI then pcall(function() Mobile._MobileGUI:Destroy() end) Mobile._MobileGUI = nil end
 end
@@ -234,6 +245,10 @@ local function Stop_Camlock_Mobile()
     if M and M._CamlockGUI then pcall(function() M._CamlockGUI:Destroy() end) M._CamlockGUI = nil end
 end
 
+local function Stop_AntiFling_External()
+    Shared.AntiFling = false
+end
+
 local function Load_SilentAim_ByMethod()
     local m = Shared.SilentAimMethod
     if m == "FOV" then Load_SilentAim_FOV()
@@ -247,9 +262,6 @@ local function DisableAllScripts()
     Shared.TriggerBot = false
     Shared.Camlock = false
     Shared.SilentAim = false
-    Shared.Desync = false
-    Shared.DisableDesync = false
-    Shared.FpsBoost = false
     Shared.AutoReload = false
     Shared.PlayerPanel = false
     Shared.DragShoot = false
@@ -262,14 +274,16 @@ local function DisableAllScripts()
     Shared.OPKill = false
     Shared.Aura = false
     Shared.AntiFling = false
+    
     Stop_InstantStomp()
     Stop_SilentAim_All()
     Stop_Camlock_PC()
     Stop_Camlock_Mobile()
+    Stop_AntiFling_External()
 end
 
 local function MainUI()
-    if CoreGui:FindFirstChild("SchmecktUI") then CoreGui.SchmecktUI:Destroy() end
+    if CoreGui:FindFirstChild("MeuliosUI") then CoreGui.MeuliosUI:Destroy() end
 
     local SCALE = 1
     if Shared.Platform == "Mobile" or UserInputService.TouchEnabled then
@@ -277,19 +291,24 @@ local function MainUI()
     end
 
     local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "SchmecktUI"
+    ScreenGui.Name = "MeuliosUI"
     ScreenGui.ResetOnSpawn = false
     ScreenGui.Parent = CoreGui
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     local Theme = {
-        Background = Color3.fromRGB(15, 5, 5),
-        Card = Color3.fromRGB(45, 10, 10),
-        Accent = Color3.fromRGB(220, 0, 0),
+        Background = Color3.fromRGB(20, 5, 15),
+        Card = Color3.fromRGB(45, 12, 35),
+        Accent = Color3.fromRGB(255, 20, 147),
+        AccentSecondary = Color3.fromRGB(220, 20, 60),
+        Purple = Color3.fromRGB(180, 50, 255),
+        PurpleLight = Color3.fromRGB(220, 130, 255),
         Text = Color3.fromRGB(255, 255, 255),
-        SubText = Color3.fromRGB(255, 150, 150),
-        Stroke = Color3.fromRGB(80, 0, 0),
-        Shadow = Color3.fromRGB(0, 0, 0)
+        SubText = Color3.fromRGB(255, 150, 180),
+        Stroke = Color3.fromRGB(150, 30, 100),
+        StrokeLight = Color3.fromRGB(255, 105, 180),
+        Shadow = Color3.fromRGB(0, 0, 0),
+        Glow = Color3.fromRGB(255, 100, 180)
     }
 
     local function scaleUDim(x, y) return UDim2.new(0, x * SCALE, 0, y * SCALE) end
@@ -297,75 +316,205 @@ local function MainUI()
 
     local BottomBarShadow = Instance.new("Frame")
     BottomBarShadow.Name = "BottomBarShadow"
-    BottomBarShadow.Size = scaleUDim(510, 65)
-    BottomBarShadow.Position = UDim2.new(0.5, -(255 * SCALE), 1, -(115 * SCALE))
+    BottomBarShadow.Size = scaleUDim(580, 75)
+    BottomBarShadow.Position = UDim2.new(0.5, -(290 * SCALE), 1, -(142 * SCALE))
     BottomBarShadow.BackgroundColor3 = Theme.Shadow
-    BottomBarShadow.BackgroundTransparency = 0.7
+    BottomBarShadow.BackgroundTransparency = 0.6
     BottomBarShadow.BorderSizePixel = 0
     BottomBarShadow.Parent = ScreenGui
-    Instance.new("UICorner", BottomBarShadow).CornerRadius = UDim.new(0, 14 * SCALE)
+    Instance.new("UICorner", BottomBarShadow).CornerRadius = UDim.new(0, 16 * SCALE)
 
     local BottomBar = Instance.new("Frame")
     BottomBar.Name = "BottomBar"
-    BottomBar.Size = scaleUDim(500, 55)
-    BottomBar.Position = UDim2.new(0.5, -(250 * SCALE), 1, -(120 * SCALE))
+    BottomBar.Size = scaleUDim(570, 65)
+    BottomBar.Position = UDim2.new(0.5, -(285 * SCALE), 1, -(148 * SCALE))
     BottomBar.BackgroundColor3 = Theme.Background
     BottomBar.BorderSizePixel = 0
     BottomBar.Parent = ScreenGui
 
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 12 * SCALE)
-    UICorner.Parent = BottomBar
+    local UICorner = Instance.new("UICorner"); UICorner.CornerRadius = UDim.new(0, 14 * SCALE); UICorner.Parent = BottomBar
+    
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Color = Theme.Stroke
-    UIStroke.Thickness = 1.5 * SCALE
+    UIStroke.Thickness = 2 * SCALE
+    UIStroke.Transparency = 0
     UIStroke.Parent = BottomBar
+
+    local barStrokeGrad = Instance.new("UIGradient")
+    barStrokeGrad.Rotation = 45
+    barStrokeGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
+    })
+    barStrokeGrad.Parent = UIStroke
 
     local Logo = Instance.new("ImageLabel")
     Logo.Name = "Logo"
-    Logo.Size = scaleUDim(38, 38)
-    Logo.Position = UDim2.new(0, 12 * SCALE, 0.5, -(19 * SCALE))
+    Logo.Size = scaleUDim(44, 44)
+    Logo.Position = UDim2.new(0, 12 * SCALE, 0.5, -(22 * SCALE))
     Logo.BackgroundColor3 = Theme.Card
+    Logo.BackgroundTransparency = 0
     Logo.Image = LOGO_ASSET
+    Logo.ScaleType = Enum.ScaleType.Crop
     Logo.Parent = BottomBar
     Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 10 * SCALE)
-    local LogoStroke = Instance.new("UIStroke")
-    LogoStroke.Color = Theme.Accent
-    LogoStroke.Thickness = 1 * SCALE
-    LogoStroke.Transparency = 0.5
-    LogoStroke.Parent = Logo
+    local LogoStroke = Instance.new("UIStroke"); LogoStroke.Color = Theme.Accent; LogoStroke.Thickness = 2 * SCALE; LogoStroke.Parent = Logo
+
+    local XLabel = Instance.new("TextLabel")
+    XLabel.Name = "XLabel"
+    XLabel.Size = scaleUDim(28, 44)
+    XLabel.Position = UDim2.new(0, 60 * SCALE, 0.5, -(22 * SCALE))
+    XLabel.BackgroundTransparency = 1
+    XLabel.Text = "✕"
+    XLabel.Font = Enum.Font.GothamBlack
+    XLabel.TextSize = scaleSize(22)
+    XLabel.TextColor3 = Theme.Purple
+    XLabel.Parent = BottomBar
+
+    local XStroke = Instance.new("UIStroke")
+    XStroke.Color = Theme.PurpleLight
+    XStroke.Thickness = 1.5
+    XStroke.Transparency = 0.3
+    XStroke.Parent = XLabel
+
+    local xGrad = Instance.new("UIGradient")
+    xGrad.Rotation = 45
+    xGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 50, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 130, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 30, 200))
+    })
+    xGrad.Parent = XLabel
+
+    local Logo2 = Instance.new("ImageLabel")
+    Logo2.Name = "Logo2"
+    Logo2.Size = scaleUDim(40, 40)
+    Logo2.Position = UDim2.new(0, 90 * SCALE, 0.5, -(20 * SCALE))
+    Logo2.BackgroundTransparency = 1
+    Logo2.Image = LOGO2_ASSET
+    Logo2.ScaleType = Enum.ScaleType.Fit
+    Logo2.Parent = BottomBar
+    Instance.new("UICorner", Logo2).CornerRadius = UDim.new(1, 0)
+    local Logo2Stroke = Instance.new("UIStroke"); Logo2Stroke.Color = Theme.Purple; Logo2Stroke.Thickness = 2 * SCALE; Logo2Stroke.Parent = Logo2
 
     local Title = Instance.new("TextLabel")
     Title.Name = "Title"
-    Title.Size = scaleUDim(250, 22)
-    Title.Position = UDim2.new(0, 60 * SCALE, 0, 8 * SCALE)
+    Title.Size = scaleUDim(300, 24)
+    Title.Position = UDim2.new(0, 140 * SCALE, 0, 10 * SCALE)
     Title.BackgroundTransparency = 1
-    Title.Text = "ShadowPepper Hub"
+    Title.Text = "Meulios + ShadowPepper Hub"
     Title.Font = Enum.Font.GothamBlack
-    Title.TextSize = scaleSize(17)
+    Title.TextSize = scaleSize(15)
     Title.TextColor3 = Theme.Accent
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Parent = BottomBar
 
+    local titleGrad = Instance.new("UIGradient")
+    titleGrad.Rotation = 45
+    titleGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+        ColorSequenceKeypoint.new(0.4, Color3.fromRGB(180, 50, 255)),
+        ColorSequenceKeypoint.new(0.6, Color3.fromRGB(220, 130, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
+    })
+    titleGrad.Parent = Title
+
+    local TitleStroke = Instance.new("UIStroke")
+    TitleStroke.Color = Color3.fromRGB(80, 0, 60)
+    TitleStroke.Thickness = 1
+    TitleStroke.Transparency = 0.5
+    TitleStroke.Parent = Title
+
     local SubTitle = Instance.new("TextLabel")
     SubTitle.Name = "SubTitle"
     SubTitle.Size = scaleUDim(300, 15)
-    SubTitle.Position = UDim2.new(0, 60 * SCALE, 0, 30 * SCALE)
+    SubTitle.Position = UDim2.new(0, 140 * SCALE, 0, 35 * SCALE)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = Shared.Platform .. " Edition | by schmeckt"
+    SubTitle.Text = Shared.Platform .. " Edition | newbois!"
     SubTitle.Font = Enum.Font.GothamMedium
-    SubTitle.TextSize = scaleSize(10)
+    SubTitle.TextSize = scaleSize(11)
     SubTitle.TextColor3 = Theme.SubText
     SubTitle.TextXAlignment = Enum.TextXAlignment.Left
     SubTitle.Parent = BottomBar
 
+    local subGrad = Instance.new("UIGradient")
+    subGrad.Rotation = -45
+    subGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 150, 180)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 130, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
+    })
+    subGrad.Parent = SubTitle
+
+    local colorCycleConnection
+    task.spawn(function()
+        local phase = 0
+        colorCycleConnection = RunService.Heartbeat:Connect(function(dt)
+            if not BottomBar.Parent then 
+                colorCycleConnection:Disconnect()
+                return 
+            end
+            
+            phase = (phase + dt * 0.8) % 1
+            
+            local offset1 = phase
+            local offset2 = (phase + 0.25) % 1
+            local offset3 = (phase + 0.5) % 1
+            local offset4 = (phase + 0.75) % 1
+            
+            local function lerpColor(t)
+                local colors = {
+                    Color3.fromRGB(255, 20, 147),   -- Hot Pink
+                    Color3.fromRGB(220, 20, 60),    -- Crimson
+                    Color3.fromRGB(180, 50, 255),   -- Purple
+                    Color3.fromRGB(255, 105, 180),  -- Pink
+                }
+                local index = math.floor(t * #colors) + 1
+                local nextIndex = (index % #colors) + 1
+                local localT = (t * #colors) % 1
+                return colors[index]:Lerp(colors[nextIndex], localT)
+            end
+            
+            titleGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, lerpColor(offset1)),
+                ColorSequenceKeypoint.new(0.33, lerpColor(offset2)),
+                ColorSequenceKeypoint.new(0.66, lerpColor(offset3)),
+                ColorSequenceKeypoint.new(1, lerpColor(offset4))
+            })
+            
+            subGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, lerpColor(offset2)),
+                ColorSequenceKeypoint.new(0.5, lerpColor(offset3)),
+                ColorSequenceKeypoint.new(1, lerpColor(offset4))
+            })
+            
+            xGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, lerpColor(offset3)),
+                ColorSequenceKeypoint.new(0.5, lerpColor(offset4)),
+                ColorSequenceKeypoint.new(1, lerpColor(offset1))
+            })
+            
+            barStrokeGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, lerpColor(offset1)),
+                ColorSequenceKeypoint.new(0.5, lerpColor(offset2)),
+                ColorSequenceKeypoint.new(1, lerpColor(offset3))
+            })
+            
+            LogoStroke.Color = lerpColor(offset1)
+            Logo2Stroke.Color = lerpColor(offset3)
+            XStroke.Color = lerpColor(offset2)
+        end)
+    end)
+
     local StatsFrame = Instance.new("Frame")
-    StatsFrame.Size = UDim2.new(0, 120 * SCALE, 0, 40 * SCALE)
-    StatsFrame.Position = UDim2.new(1, -(135 * SCALE), 0.5, -(20 * SCALE))
+    StatsFrame.Size = UDim2.new(0, 110 * SCALE, 0, 48 * SCALE)
+    StatsFrame.Position = UDim2.new(1, -(175 * SCALE), 0.5, -(24 * SCALE))
     StatsFrame.BackgroundColor3 = Theme.Card
     StatsFrame.BorderSizePixel = 0
     StatsFrame.Parent = BottomBar
-    Instance.new("UICorner", StatsFrame).CornerRadius = UDim.new(0, 8 * SCALE)
+    Instance.new("UICorner", StatsFrame).CornerRadius = UDim.new(0, 10 * SCALE)
+    local StatsStroke = Instance.new("UIStroke"); StatsStroke.Color = Theme.Stroke; StatsStroke.Thickness = 1; StatsStroke.Parent = StatsFrame
 
     local StatsLabel = Instance.new("TextLabel")
     StatsLabel.Name = "Stats"
@@ -374,7 +523,7 @@ local function MainUI()
     StatsLabel.BackgroundTransparency = 1
     StatsLabel.Text = "FPS: --\nPing: --"
     StatsLabel.Font = Enum.Font.GothamBold
-    StatsLabel.TextSize = scaleSize(10)
+    StatsLabel.TextSize = scaleSize(11)
     StatsLabel.TextColor3 = Theme.Text
     StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
     StatsLabel.Parent = StatsFrame
@@ -391,61 +540,61 @@ local function MainUI()
 
     local MinBtn = Instance.new("TextButton")
     MinBtn.Name = "Minimize"
-    MinBtn.Size = scaleUDim(30, 30)
-    MinBtn.Position = UDim2.new(1, -(35 * SCALE), 0, -(12 * SCALE))
-    MinBtn.BackgroundColor3 = Theme.Accent
+    MinBtn.Size = scaleUDim(34, 34)
+    MinBtn.Position = UDim2.new(1, -(52 * SCALE), 0.5, -(17 * SCALE))
+    MinBtn.BackgroundColor3 = Theme.Purple
     MinBtn.Text = "-"
     MinBtn.TextColor3 = Theme.Text
     MinBtn.Font = Enum.Font.GothamBlack
-    MinBtn.TextSize = scaleSize(20)
+    MinBtn.TextSize = scaleSize(24)
     MinBtn.Parent = BottomBar
     Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 8 * SCALE)
-    local MinStroke = Instance.new("UIStroke")
-    MinStroke.Color = Color3.fromRGB(255, 255, 255)
-    MinStroke.Thickness = 1.5 * SCALE
-    MinStroke.Parent = MinBtn
+    local MinStroke = Instance.new("UIStroke"); MinStroke.Color = Theme.PurpleLight; MinStroke.Thickness = 2 * SCALE; MinStroke.Parent = MinBtn
 
     local HubFrameShadow = Instance.new("Frame")
     HubFrameShadow.Name = "HubFrameShadow"
-    HubFrameShadow.Size = scaleUDim(275, 480)
-    HubFrameShadow.Position = UDim2.new(1, -(290 * SCALE), 0.5, -(400 * SCALE))
+    HubFrameShadow.Size = scaleUDim(285, 500)
+    HubFrameShadow.Position = UDim2.new(1, -(300 * SCALE), 0.5, -(410 * SCALE))
     HubFrameShadow.BackgroundColor3 = Theme.Shadow
-    HubFrameShadow.BackgroundTransparency = 0.6
+    HubFrameShadow.BackgroundTransparency = 0.5
     HubFrameShadow.BorderSizePixel = 0
     HubFrameShadow.Parent = ScreenGui
-    Instance.new("UICorner", HubFrameShadow).CornerRadius = UDim.new(0, 16 * SCALE)
+    Instance.new("UICorner", HubFrameShadow).CornerRadius = UDim.new(0, 18 * SCALE)
 
     local HubFrame = Instance.new("Frame")
     HubFrame.Name = "HubFrame"
-    HubFrame.Size = scaleUDim(265, 470)
-    HubFrame.Position = UDim2.new(1, -(285 * SCALE), 0.5, -(395 * SCALE))
+    HubFrame.Size = scaleUDim(275, 490)
+    HubFrame.Position = UDim2.new(1, -(295 * SCALE), 0.5, -(405 * SCALE))
     HubFrame.BackgroundColor3 = Theme.Background
+    HubFrame.BackgroundTransparency = 0
     HubFrame.BorderSizePixel = 0
     HubFrame.Parent = ScreenGui
+    
+    local HubCorner = Instance.new("UICorner"); HubCorner.CornerRadius = UDim.new(0, 16 * SCALE); HubCorner.Parent = HubFrame
+    local HubStroke = Instance.new("UIStroke"); HubStroke.Color = Theme.Stroke; HubStroke.Transparency = 0; HubStroke.Thickness = 2 * SCALE; HubStroke.Parent = HubFrame
 
-    local HubCorner = Instance.new("UICorner")
-    HubCorner.CornerRadius = UDim.new(0, 14 * SCALE)
-    HubCorner.Parent = HubFrame
-    local HubStroke = Instance.new("UIStroke")
-    HubStroke.Color = Theme.Stroke
-    HubStroke.Thickness = 1.5 * SCALE
-    HubStroke.Parent = HubFrame
+    local hubStrokeGrad = Instance.new("UIGradient")
+    hubStrokeGrad.Rotation = 90
+    hubStrokeGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
+    })
+    hubStrokeGrad.Parent = HubStroke
 
     local CloseBtn = Instance.new("TextButton")
     CloseBtn.Name = "Close"
-    CloseBtn.Size = scaleUDim(25, 25)
-    CloseBtn.Position = UDim2.new(1, -(30 * SCALE), 0, 10 * SCALE)
+    CloseBtn.Size = scaleUDim(28, 28)
+    CloseBtn.Position = UDim2.new(1, -(35 * SCALE), 0, 10 * SCALE)
     CloseBtn.BackgroundColor3 = Theme.Card
-    CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = Theme.Accent
-    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.BackgroundTransparency = 0
+    CloseBtn.Text = "✕"
+    CloseBtn.TextColor3 = Theme.Purple
+    CloseBtn.Font = Enum.Font.GothamBlack
     CloseBtn.TextSize = scaleSize(14)
     CloseBtn.Parent = HubFrame
-    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6 * SCALE)
-    local CloseStroke = Instance.new("UIStroke")
-    CloseStroke.Color = Theme.Stroke
-    CloseStroke.Thickness = 1 * SCALE
-    CloseStroke.Parent = CloseBtn
+    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8 * SCALE)
+    local CloseStroke = Instance.new("UIStroke"); CloseStroke.Color = Theme.Purple; CloseStroke.Thickness = 1 * SCALE; CloseStroke.Parent = CloseBtn
 
     MinBtn.MouseButton1Click:Connect(function()
         HubFrame.Visible = not HubFrame.Visible
@@ -458,38 +607,65 @@ local function MainUI()
     end)
 
     local HeaderBg = Instance.new("Frame")
-    HeaderBg.Size = UDim2.new(1, 0, 0, 45 * SCALE)
+    HeaderBg.Size = UDim2.new(1, 0, 0, 50 * SCALE)
     HeaderBg.BackgroundColor3 = Theme.Card
+    HeaderBg.BackgroundTransparency = 0
     HeaderBg.BorderSizePixel = 0
     HeaderBg.Parent = HubFrame
-    Instance.new("UICorner", HeaderBg).CornerRadius = UDim.new(0, 14 * SCALE)
+    Instance.new("UICorner", HeaderBg).CornerRadius = UDim.new(0, 16 * SCALE)
+
+    local headerGradFrame = Instance.new("Frame")
+    headerGradFrame.Size = UDim2.new(1, 0, 1, 0)
+    headerGradFrame.BackgroundColor3 = Theme.Purple
+    headerGradFrame.BackgroundTransparency = 0.88
+    headerGradFrame.BorderSizePixel = 0
+    headerGradFrame.Parent = HeaderBg
+    Instance.new("UICorner", headerGradFrame).CornerRadius = UDim.new(0, 16 * SCALE)
+
+    local hGrad = Instance.new("UIGradient")
+    hGrad.Rotation = 0
+    hGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1)
+    })
+    hGrad.Parent = headerGradFrame
 
     local HeaderText = Instance.new("TextLabel")
-    HeaderText.Size = UDim2.new(1, -(24 * SCALE), 0, 30 * SCALE)
-    HeaderText.Position = UDim2.new(0, 12 * SCALE, 0, 8 * SCALE)
+    HeaderText.Size = UDim2.new(1, -(24 * SCALE), 0, 35 * SCALE)
+    HeaderText.Position = UDim2.new(0, 14 * SCALE, 0, 8 * SCALE)
     HeaderText.BackgroundTransparency = 1
-    HeaderText.Text = "FEATURES"
+    HeaderText.Text = "✦ FEATURES"
     HeaderText.Font = Enum.Font.GothamBlack
-    HeaderText.TextSize = scaleSize(13)
+    HeaderText.TextSize = scaleSize(14)
     HeaderText.TextColor3 = Theme.Accent
     HeaderText.TextXAlignment = Enum.TextXAlignment.Left
     HeaderText.Parent = HubFrame
 
+    local headerTextGrad = Instance.new("UIGradient")
+    headerTextGrad.Rotation = 0
+    headerTextGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
+    })
+    headerTextGrad.Parent = HeaderText
+
+    -- Scroll Frame
     local Scroll = Instance.new("ScrollingFrame")
     Scroll.Name = "Scroll"
-    Scroll.Size = UDim2.new(1, -(10 * SCALE), 1, -(55 * SCALE))
-    Scroll.Position = UDim2.new(0, 5 * SCALE, 0, 48 * SCALE)
+    Scroll.Size = UDim2.new(1, -(10 * SCALE), 1, -(60 * SCALE))
+    Scroll.Position = UDim2.new(0, 5 * SCALE, 0, 52 * SCALE)
     Scroll.BackgroundTransparency = 1
     Scroll.BorderSizePixel = 0
-    Scroll.ScrollBarThickness = 3 * SCALE
-    Scroll.ScrollBarImageColor3 = Theme.Accent
-    Scroll.ScrollBarImageTransparency = 0.3
+    Scroll.ScrollBarThickness = 4 * SCALE
+    Scroll.ScrollBarImageColor3 = Theme.Purple
+    Scroll.ScrollBarImageTransparency = 0.2
     Scroll.Parent = HubFrame
 
     local UIList = Instance.new("UIListLayout")
     UIList.Parent = Scroll
     UIList.SortOrder = Enum.SortOrder.LayoutOrder
-    UIList.Padding = UDim.new(0, 6 * SCALE)
+    UIList.Padding = UDim.new(0, 7 * SCALE)
 
     local UIPadding = Instance.new("UIPadding")
     UIPadding.PaddingLeft = UDim.new(0, 8 * SCALE)
@@ -498,28 +674,50 @@ local function MainUI()
 
     local function CreateSection(text)
         local SecFrame = Instance.new("Frame")
-        SecFrame.Size = scaleUDim(250, 28)
+        SecFrame.Size = scaleUDim(250, 30)
         SecFrame.BackgroundTransparency = 1
         SecFrame.Parent = Scroll
 
         local SecText = Instance.new("TextLabel")
-        SecText.Size = scaleUDim(250, 28)
+        SecText.Size = scaleUDim(250, 30)
         SecText.Position = UDim2.new(0, 0, 0, 0)
         SecText.BackgroundTransparency = 1
-        SecText.Text = text
+        SecText.Text = "♦ " .. text
         SecText.TextColor3 = Theme.Accent
         SecText.Font = Enum.Font.GothamBlack
-        SecText.TextSize = scaleSize(10)
+        SecText.TextSize = scaleSize(11)
         SecText.TextXAlignment = Enum.TextXAlignment.Left
         SecText.Parent = SecFrame
 
+        local secGrad = Instance.new("UIGradient")
+        secGrad.Rotation = 0
+        secGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
+        })
+        secGrad.Parent = SecText
+
         local SecLine = Instance.new("Frame")
-        SecLine.Size = UDim2.new(1, -(100 * SCALE), 0, 1)
-        SecLine.Position = UDim2.new(0, 95 * SCALE, 0.5, 0)
-        SecLine.BackgroundColor3 = Theme.Accent
-        SecLine.BackgroundTransparency = 0.7
+        SecLine.Size = UDim2.new(1, -(110 * SCALE), 0, 2)
+        SecLine.Position = UDim2.new(0, 105 * SCALE, 0.5, 0)
+        SecLine.BackgroundColor3 = Theme.Purple
+        SecLine.BackgroundTransparency = 0.4
         SecLine.BorderSizePixel = 0
         SecLine.Parent = SecFrame
+        Instance.new("UICorner", SecLine).CornerRadius = UDim.new(1, 0)
+
+        local lineGrad = Instance.new("UIGradient")
+        lineGrad.Rotation = 0
+        lineGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 50, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
+        })
+        lineGrad.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(1, 0.8)
+        })
+        lineGrad.Parent = SecLine
 
         return SecFrame
     end
@@ -527,21 +725,23 @@ local function MainUI()
     local function CreateSwitch(text, default, callback)
         local Button = Instance.new("TextButton")
         Button.Name = text
-        Button.Size = scaleUDim(250, 42)
+        Button.Size = scaleUDim(250, 44)
         Button.BackgroundColor3 = Theme.Card
+        Button.BackgroundTransparency = 0
         Button.Text = ""
         Button.AutoButtonColor = false
         Button.Parent = Scroll
-        Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 8 * SCALE)
+        Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 10 * SCALE)
 
         local BtnStroke = Instance.new("UIStroke")
         BtnStroke.Color = Theme.Stroke
-        BtnStroke.Thickness = 1 * SCALE
+        BtnStroke.Thickness = 1.5 * SCALE
+        BtnStroke.Transparency = 0.3
         BtnStroke.Parent = Button
 
         local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(1, -(65 * SCALE), 1, 0)
-        Label.Position = UDim2.new(0, 12 * SCALE, 0, 0)
+        Label.Size = UDim2.new(1, -(70 * SCALE), 1, 0)
+        Label.Position = UDim2.new(0, 14 * SCALE, 0, 0)
         Label.BackgroundTransparency = 1
         Label.Text = text
         Label.Font = Enum.Font.GothamBold
@@ -551,29 +751,40 @@ local function MainUI()
         Label.Parent = Button
 
         local SwitchBg = Instance.new("Frame")
-        SwitchBg.Size = scaleUDim(42, 22)
-        SwitchBg.Position = UDim2.new(1, -(52 * SCALE), 0.5, -(11 * SCALE))
-        SwitchBg.BackgroundColor3 = default and Theme.Accent or Color3.fromRGB(30, 30, 30)
+        SwitchBg.Size = scaleUDim(46, 24)
+        SwitchBg.Position = UDim2.new(1, -(56 * SCALE), 0.5, -(12 * SCALE))
+        SwitchBg.BackgroundColor3 = default and Theme.Purple or Color3.fromRGB(40, 20, 30)
         SwitchBg.BorderSizePixel = 0
         SwitchBg.Parent = Button
         Instance.new("UICorner", SwitchBg).CornerRadius = UDim.new(1, 0)
+        local SwitchStroke = Instance.new("UIStroke"); SwitchStroke.Color = Theme.Stroke; SwitchStroke.Thickness = 1; SwitchStroke.Parent = SwitchBg
 
         local Circle = Instance.new("Frame")
-        Circle.Size = scaleUDim(16, 16)
-        local startX = default and (23 * SCALE) or (3 * SCALE)
-        Circle.Position = UDim2.new(0, startX, 0.5, -(8 * SCALE))
+        Circle.Size = scaleUDim(18, 18)
+        local startX = default and (25 * SCALE) or (3 * SCALE)
+        Circle.Position = UDim2.new(0, startX, 0.5, -(9 * SCALE))
         Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         Circle.BorderSizePixel = 0
         Circle.Parent = SwitchBg
         Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
 
+        local CircleGlow = Instance.new("UIStroke")
+        CircleGlow.Color = Theme.Purple
+        CircleGlow.Thickness = default and 2 or 0
+        CircleGlow.Transparency = 0.5
+        CircleGlow.Parent = Circle
+
         local enabled = default
 
         local function update()
-            local targetX = enabled and (23 * SCALE) or (3 * SCALE)
-            local targetColor = enabled and Theme.Accent or Color3.fromRGB(30, 30, 30)
-            TweenService:Create(Circle, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Position = UDim2.new(0, targetX, 0.5, -(8 * SCALE))}):Play()
+            local targetX = enabled and (25 * SCALE) or (3 * SCALE)
+            local targetColor = enabled and Theme.Purple or Color3.fromRGB(40, 20, 30)
+            local glowThickness = enabled and 2 or 0
+
+            TweenService:Create(Circle, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Position = UDim2.new(0, targetX, 0.5, -(9 * SCALE))}):Play()
             TweenService:Create(SwitchBg, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundColor3 = targetColor}):Play()
+            TweenService:Create(CircleGlow, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Thickness = glowThickness}):Play()
+            TweenService:Create(BtnStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Color = enabled and Theme.Purple or Theme.Stroke}):Play()
         end
 
         Button.MouseButton1Click:Connect(function()
@@ -592,26 +803,35 @@ local function MainUI()
     local function CreateButton(text, callback)
         local Wrapper = Instance.new("Frame")
         Wrapper.BackgroundTransparency = 1
-        Wrapper.Size = scaleUDim(250, 38)
+        Wrapper.Size = scaleUDim(250, 40)
         Wrapper.Parent = Scroll
 
         local Btn = Instance.new("TextButton")
         Btn.Size = UDim2.new(1, 0, 1, -(4 * SCALE))
         Btn.Position = UDim2.new(0, 0, 0, 2 * SCALE)
-        Btn.BackgroundColor3 = Theme.Accent
-        Btn.BackgroundTransparency = 0.2
+        Btn.BackgroundColor3 = Theme.Purple
+        Btn.BackgroundTransparency = 0.15
         Btn.Text = text
         Btn.TextColor3 = Theme.Text
-        Btn.Font = Enum.Font.GothamBold
-        Btn.TextSize = scaleSize(11)
+        Btn.Font = Enum.Font.GothamBlack
+        Btn.TextSize = scaleSize(12)
         Btn.AutoButtonColor = false
         Btn.Parent = Wrapper
-        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8 * SCALE)
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 10 * SCALE)
+
+        local btnGrad = Instance.new("UIGradient")
+        btnGrad.Rotation = 45
+        btnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
+        })
+        btnGrad.Parent = Btn
 
         local BtnStroke = Instance.new("UIStroke")
-        BtnStroke.Color = Color3.fromRGB(255, 100, 100)
-        BtnStroke.Thickness = 1
-        BtnStroke.Transparency = 0.5
+        BtnStroke.Color = Theme.PurpleLight
+        BtnStroke.Thickness = 1.5
+        BtnStroke.Transparency = 0.3
         BtnStroke.Parent = Btn
 
         Btn.MouseButton1Click:Connect(function()
@@ -630,26 +850,24 @@ local function MainUI()
     CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) Shared.PlayerPanel = s if s then Load_PlayerPanel() end end)
     CreateSwitch("Anti Fling", Shared.AntiFling, function(s) Shared.AntiFling = s if s then Load_AntiFling() end end)
     CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s) Shared.InstantStomp = s if s then Load_InstantStomp() else Stop_InstantStomp() end end)
-    CreateSwitch("Desync", Shared.Desync, function(s) Shared.Desync = s if s then Load_Desync() end end)
-    CreateSwitch("Disable Desync", Shared.DisableDesync, function(s) Shared.DisableDesync = s if s then Load_DisableDesync() end end)
-    CreateSwitch("FPS Boost", Shared.FpsBoost, function(s) Shared.FpsBoost = s if s then Load_FpsBoost() end end)
     CreateSwitch("Auto Reload", Shared.AutoReload, function(s) Shared.AutoReload = s if s then Load_AutoReload_S() end end)
 
     CreateSection("COMBAT / AIM")
 
     local AimWarnLabel = Instance.new("TextLabel")
-    AimWarnLabel.Size = scaleUDim(250, 20)
+    AimWarnLabel.Size = scaleUDim(250, 22)
     AimWarnLabel.BackgroundColor3 = Theme.Card
+    AimWarnLabel.BackgroundTransparency = 0
     AimWarnLabel.Text = ""
-    AimWarnLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+    AimWarnLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
     AimWarnLabel.Font = Enum.Font.GothamBold
-    AimWarnLabel.TextSize = scaleSize(9)
+    AimWarnLabel.TextSize = scaleSize(10)
     AimWarnLabel.Visible = false
     AimWarnLabel.Parent = Scroll
-    Instance.new("UICorner", AimWarnLabel).CornerRadius = UDim.new(0, 6 * SCALE)
+    Instance.new("UICorner", AimWarnLabel).CornerRadius = UDim.new(0, 8 * SCALE)
 
     local function FlashAimWarn(txt)
-        AimWarnLabel.Text = txt
+        AimWarnLabel.Text = "⚠ " .. txt
         AimWarnLabel.Visible = true
         task.delay(2.5, function() if AimWarnLabel then AimWarnLabel.Visible = false end end)
     end
@@ -678,7 +896,7 @@ local function MainUI()
 
     local SilentAimMethodRow = Instance.new("Frame")
     SilentAimMethodRow.BackgroundTransparency = 1
-    SilentAimMethodRow.Size = scaleUDim(250, 38)
+    SilentAimMethodRow.Size = scaleUDim(250, 40)
     SilentAimMethodRow.Parent = Scroll
 
     local FOVBtn = Instance.new("TextButton")
@@ -691,11 +909,8 @@ local function MainUI()
     FOVBtn.TextSize = scaleSize(10)
     FOVBtn.AutoButtonColor = false
     FOVBtn.Parent = SilentAimMethodRow
-    Instance.new("UICorner", FOVBtn).CornerRadius = UDim.new(0, 6 * SCALE)
-    local FOVStroke = Instance.new("UIStroke")
-    FOVStroke.Color = Theme.Stroke
-    FOVStroke.Thickness = 1
-    FOVStroke.Parent = FOVBtn
+    Instance.new("UICorner", FOVBtn).CornerRadius = UDim.new(0, 8 * SCALE)
+    local FOVStroke = Instance.new("UIStroke"); FOVStroke.Color = Theme.Stroke; FOVStroke.Thickness = 1.5; FOVStroke.Parent = FOVBtn
 
     local QBtn = Instance.new("TextButton")
     QBtn.Size = UDim2.new(0.48, 0, 1, -(4 * SCALE))
@@ -707,11 +922,8 @@ local function MainUI()
     QBtn.TextSize = scaleSize(10)
     QBtn.AutoButtonColor = false
     QBtn.Parent = SilentAimMethodRow
-    Instance.new("UICorner", QBtn).CornerRadius = UDim.new(0, 6 * SCALE)
-    local QStroke = Instance.new("UIStroke")
-    QStroke.Color = Theme.Stroke
-    QStroke.Thickness = 1
-    QStroke.Parent = QBtn
+    Instance.new("UICorner", QBtn).CornerRadius = UDim.new(0, 8 * SCALE)
+    local QStroke = Instance.new("UIStroke"); QStroke.Color = Theme.Stroke; QStroke.Thickness = 1.5; QStroke.Parent = QBtn
 
     local MobileBtn = Instance.new("TextButton")
     MobileBtn.Size = UDim2.new(1, 0, 1, -(4 * SCALE))
@@ -723,16 +935,16 @@ local function MainUI()
     MobileBtn.TextSize = scaleSize(10)
     MobileBtn.AutoButtonColor = false
     MobileBtn.Parent = SilentAimMethodRow
-    Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(0, 6 * SCALE)
-    local MobStroke = Instance.new("UIStroke")
-    MobStroke.Color = Theme.Stroke
-    MobStroke.Thickness = 1
-    MobStroke.Parent = MobileBtn
+    Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(0, 8 * SCALE)
+    local MobStroke = Instance.new("UIStroke"); MobStroke.Color = Theme.Stroke; MobStroke.Thickness = 1.5; MobStroke.Parent = MobileBtn
 
     local function updateMethodButtons()
-        FOVBtn.BackgroundColor3 = (Shared.SilentAimMethod == "FOV") and Theme.Accent or Theme.Card
-        QBtn.BackgroundColor3 = (Shared.SilentAimMethod == "QMethod") and Theme.Accent or Theme.Card
-        MobileBtn.BackgroundColor3 = (Shared.SilentAimMethod == "MobileMethod") and Theme.Accent or Theme.Card
+        FOVBtn.BackgroundColor3 = (Shared.SilentAimMethod == "FOV") and Theme.Purple or Theme.Card
+        QBtn.BackgroundColor3 = (Shared.SilentAimMethod == "QMethod") and Theme.Purple or Theme.Card
+        MobileBtn.BackgroundColor3 = (Shared.SilentAimMethod == "MobileMethod") and Theme.Purple or Theme.Card
+        FOVStroke.Color = (Shared.SilentAimMethod == "FOV") and Theme.PurpleLight or Theme.Stroke
+        QStroke.Color = (Shared.SilentAimMethod == "QMethod") and Theme.PurpleLight or Theme.Stroke
+        MobStroke.Color = (Shared.SilentAimMethod == "MobileMethod") and Theme.PurpleLight or Theme.Stroke
         if Shared.Platform == "PC" then
             FOVBtn.Visible = true
             QBtn.Visible = true
@@ -803,7 +1015,7 @@ local function MainUI()
 
     local tBoxWrapper = Instance.new("Frame")
     tBoxWrapper.BackgroundTransparency = 1
-    tBoxWrapper.Size = scaleUDim(250, 38)
+    tBoxWrapper.Size = scaleUDim(250, 40)
     tBoxWrapper.Parent = Scroll
 
     local tBox = Instance.new("TextBox")
@@ -815,16 +1027,13 @@ local function MainUI()
     tBox.TextColor3 = Theme.Text
     tBox.PlaceholderColor3 = Theme.SubText
     tBox.Font = Enum.Font.GothamMedium
-    tBox.TextSize = scaleSize(11)
+    tBox.TextSize = scaleSize(12)
     tBox.Parent = tBoxWrapper
-    Instance.new("UICorner", tBox).CornerRadius = UDim.new(0, 8 * SCALE)
-    local tBoxStroke = Instance.new("UIStroke")
-    tBoxStroke.Color = Theme.Stroke
-    tBoxStroke.Thickness = 1 * SCALE
-    tBoxStroke.Parent = tBox
+    Instance.new("UICorner", tBox).CornerRadius = UDim.new(0, 10 * SCALE)
+    local tBoxStroke = Instance.new("UIStroke"); tBoxStroke.Color = Theme.Stroke; tBoxStroke.Thickness = 1.5 * SCALE; tBoxStroke.Parent = tBox
 
     tBox.Focused:Connect(function()
-        TweenService:Create(tBoxStroke, TweenInfo.new(0.2), {Color = Theme.Accent}):Play()
+        TweenService:Create(tBoxStroke, TweenInfo.new(0.2), {Color = Theme.Purple}):Play()
     end)
     tBox.FocusLost:Connect(function()
         TweenService:Create(tBoxStroke, TweenInfo.new(0.2), {Color = Theme.Stroke}):Play()
@@ -838,70 +1047,67 @@ local function MainUI()
         end
     end)
 
-    CreateSwitch("View Target", Shared.ViewTarget, function(s) Shared.ViewTarget = s end)
-    CreateSwitch("Highlight", Shared.HighlightTarget, function(s) Shared.HighlightTarget = s end)
-    CreateSwitch("Auto Katana", Shared.AutoKatanaKill, function(s) Shared.AutoKatanaKill = s end)
-    CreateSwitch("Fling Target", Shared.Fling, function(s) Shared.Fling = s end)
-    CreateSwitch("OP Kill", Shared.OPKill, function(s) Shared.OPKill = s end)
-    CreateSwitch("Aura", Shared.Aura, function(s) Shared.Aura = s end)
-    CreateButton("Teleport to Target", function() Shared.GotoTarget = true end)
+    CreateSwitch("View Target", Shared.ViewTarget, function(s) Shared.ViewTarget = s Load_Target() end)
+    CreateSwitch("Highlight", Shared.HighlightTarget, function(s) Shared.HighlightTarget = s Load_Target() end)
+    CreateSwitch("Auto Katana", Shared.AutoKatanaKill, function(s) Shared.AutoKatanaKill = s Load_Target() end)
+    CreateSwitch("Fling Target", Shared.Fling, function(s) Shared.Fling = s Load_Target() end)
+    CreateSwitch("OP Kill", Shared.OPKill, function(s) Shared.OPKill = s Load_Target() end)
+    CreateSwitch("Aura", Shared.Aura, function(s) Shared.Aura = s Load_Target() end)
+    CreateButton("Teleport to Target", function() Shared.GotoTarget = true Load_Target() end)
 
     CreateSection("SYSTEM")
 
     local PlatRow = Instance.new("Frame")
     PlatRow.BackgroundTransparency = 1
-    PlatRow.Size = scaleUDim(250, 38)
+    PlatRow.Size = scaleUDim(250, 40)
     PlatRow.Parent = Scroll
 
     local PCBtn = Instance.new("TextButton")
     PCBtn.Size = UDim2.new(0.48, 0, 1, -(4 * SCALE))
     PCBtn.Position = UDim2.new(0, 0, 0, 2 * SCALE)
-    PCBtn.BackgroundColor3 = (Shared.Platform == "PC") and Theme.Accent or Theme.Card
+    PCBtn.BackgroundColor3 = (Shared.Platform == "PC") and Theme.Purple or Theme.Card
     PCBtn.Text = "PC"
     PCBtn.TextColor3 = Theme.Text
-    PCBtn.Font = Enum.Font.GothamBold
-    PCBtn.TextSize = scaleSize(11)
+    PCBtn.Font = Enum.Font.GothamBlack
+    PCBtn.TextSize = scaleSize(12)
     PCBtn.AutoButtonColor = false
     PCBtn.Parent = PlatRow
-    Instance.new("UICorner", PCBtn).CornerRadius = UDim.new(0, 6 * SCALE)
-    local PCStroke = Instance.new("UIStroke")
-    PCStroke.Color = Theme.Stroke
-    PCStroke.Thickness = 1
-    PCStroke.Parent = PCBtn
+    Instance.new("UICorner", PCBtn).CornerRadius = UDim.new(0, 8 * SCALE)
+    local PCStroke = Instance.new("UIStroke"); PCStroke.Color = (Shared.Platform == "PC") and Theme.PurpleLight or Theme.Stroke; PCStroke.Thickness = 1.5; PCStroke.Parent = PCBtn
 
     local MobBtn = Instance.new("TextButton")
     MobBtn.Size = UDim2.new(0.48, 0, 1, -(4 * SCALE))
     MobBtn.Position = UDim2.new(0.52, 0, 0, 2 * SCALE)
-    MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.Accent or Theme.Card
+    MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.Purple or Theme.Card
     MobBtn.Text = "Mobile"
     MobBtn.TextColor3 = Theme.Text
-    MobBtn.Font = Enum.Font.GothamBold
-    MobBtn.TextSize = scaleSize(11)
+    MobBtn.Font = Enum.Font.GothamBlack
+    MobBtn.TextSize = scaleSize(12)
     MobBtn.AutoButtonColor = false
     MobBtn.Parent = PlatRow
-    Instance.new("UICorner", MobBtn).CornerRadius = UDim.new(0, 6 * SCALE)
-    local MobStroke2 = Instance.new("UIStroke")
-    MobStroke2.Color = Theme.Stroke
-    MobStroke2.Thickness = 1
-    MobStroke2.Parent = MobBtn
+    Instance.new("UICorner", MobBtn).CornerRadius = UDim.new(0, 8 * SCALE)
+    local MobStroke2 = Instance.new("UIStroke"); MobStroke2.Color = (Shared.Platform == "Mobile") and Theme.PurpleLight or Theme.Stroke; MobStroke2.Thickness = 1.5; MobStroke2.Parent = MobBtn
 
     local RestartLabel = Instance.new("TextLabel")
-    RestartLabel.Size = scaleUDim(250, 22)
+    RestartLabel.Size = scaleUDim(250, 24)
     RestartLabel.BackgroundColor3 = Theme.Card
-    RestartLabel.BackgroundTransparency = 0.5
-    RestartLabel.Text = "Click Restart to apply"
-    RestartLabel.TextColor3 = Theme.Accent
+    RestartLabel.BackgroundTransparency = 0.3
+    RestartLabel.Text = "⟳ Click Restart to apply"
+    RestartLabel.TextColor3 = Theme.Purple
     RestartLabel.Font = Enum.Font.GothamBold
-    RestartLabel.TextSize = scaleSize(9)
+    RestartLabel.TextSize = scaleSize(10)
     RestartLabel.Visible = false
     RestartLabel.Parent = Scroll
-    Instance.new("UICorner", RestartLabel).CornerRadius = UDim.new(0, 6 * SCALE)
+    Instance.new("UICorner", RestartLabel).CornerRadius = UDim.new(0, 8 * SCALE)
 
     local function updatePlatBtns()
-        PCBtn.BackgroundColor3 = (Shared.Platform == "PC") and Theme.Accent or Theme.Card
-        MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.Accent or Theme.Card
-        SubTitle.Text = Shared.Platform .. " Edition | by schmeckt"
+        PCBtn.BackgroundColor3 = (Shared.Platform == "PC") and Theme.Purple or Theme.Card
+        MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.Purple or Theme.Card
+        PCStroke.Color = (Shared.Platform == "PC") and Theme.PurpleLight or Theme.Stroke
+        MobStroke2.Color = (Shared.Platform == "Mobile") and Theme.PurpleLight or Theme.Stroke
+        SubTitle.Text = Shared.Platform .. " Edition | newbois!"
         RestartLabel.Visible = true
+
         if Shared.SilentAim then
             Stop_SilentAim_All()
             AimSwitch.Set(false)
@@ -914,15 +1120,16 @@ local function MainUI()
     PCBtn.MouseButton1Click:Connect(function() Shared.Platform = "PC" updatePlatBtns() end)
     MobBtn.MouseButton1Click:Connect(function() Shared.Platform = "Mobile" updatePlatBtns() end)
 
-    CreateButton("Close GUI", function() DisableAllScripts() Shared.SaveConfig() ScreenGui:Destroy() end)
-    CreateButton("Restart GUI", function() ScreenGui:Destroy() Shared.SaveConfig() MainUI() end)
+    CreateButton("Close GUI", function() DisableAllScripts(); Shared.SaveConfig(); ScreenGui:Destroy() end)
+    CreateButton("Restart GUI", function() ScreenGui:Destroy(); Shared.SaveConfig(); MainUI() end)
 
     local UIList2 = Scroll:FindFirstChildOfClass("UIListLayout")
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (60 * SCALE))
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (70 * SCALE))
     UIList2:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (60 * SCALE))
+        Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (70 * SCALE))
     end)
 
+    -- Dragging HubFrame
     local draggingHub, dragInputHub, dragStartHub, startPosHub
     HubFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -984,15 +1191,17 @@ Load_ShadowPepperUsers()
 task.defer(function()
     if Shared.InstantStomp then Load_InstantStomp() end
     if Shared.AutoArmor then Load_AutoArmor() end
-    if Shared.Desync then Load_Desync() end
     if Shared.SilentAim and Shared.SilentAimMethod then
         EnableSilentAimFlags()
         Load_SilentAim_ByMethod()
     end
     if Shared.TriggerBot then Load_TriggerBot() end
     if Shared.StaffNotifier then Load_StaffNotifier() end
-    if Shared.FpsBoost then Load_FpsBoost() end
     if Shared.PlayerPanel then Load_PlayerPanel() end
-    if Shared.Camlock then if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end end
+    if Shared.Camlock then 
+        if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end 
+    end
     if Shared.AntiFling then Load_AntiFling() end
+    if Shared.AutoReload then Load_AutoReload_S() end
+    if Shared.DragShoot then Load_DragShoot() end
 end)
