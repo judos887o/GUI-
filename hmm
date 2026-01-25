@@ -25,15 +25,8 @@ Shared.SilentAimMethod = Shared.SilentAimMethod
 Shared.AutoReload = Shared.AutoReload or false
 Shared.PlayerPanel = Shared.PlayerPanel or false
 Shared.DragShoot = Shared.DragShoot or false
-Shared.TargetUsername = Shared.TargetUsername
-Shared.AutoKatanaKill = Shared.AutoKatanaKill or false
-Shared.Fling = Shared.Fling or false
-Shared.HighlightTarget = Shared.HighlightTarget or false
-Shared.ViewTarget = Shared.ViewTarget or false
-Shared.GotoTarget = Shared.GotoTarget or false
+Shared.TargetPanel = Shared.TargetPanel or false
 Shared.InstantStomp = Shared.InstantStomp or false
-Shared.OPKill = Shared.OPKill or false
-Shared.Aura = Shared.Aura or false
 Shared.AntiFling = Shared.AntiFling or false
 Shared.Platform = Shared.Platform or "PC"
 Shared.Connections = Shared.Connections or {}
@@ -56,13 +49,8 @@ local function serializeConfig()
             AutoReload = Shared.AutoReload,
             PlayerPanel = Shared.PlayerPanel,
             DragShoot = Shared.DragShoot,
-            AutoKatanaKill = Shared.AutoKatanaKill,
-            Fling = Shared.Fling,
-            HighlightTarget = Shared.HighlightTarget,
-            ViewTarget = Shared.ViewTarget,
+            TargetPanel = Shared.TargetPanel,
             InstantStomp = Shared.InstantStomp,
-            OPKill = Shared.OPKill,
-            Aura = Shared.Aura,
             AntiFling = Shared.AntiFling,
         }
     }
@@ -127,7 +115,7 @@ local function Load_Internal_Q_Method() safeLoad("https://raw.githubusercontent.
 local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/main/teat") end
 local function Load_AutoReload_S() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/main/teat") end
 local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/main/teat") end
-local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/targer/refs/heads/main/asd") end 
+local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/targer/refs/heads/main/asd") end
 local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/main/teat") end
 local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/main/teat") end
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/main/teats") end
@@ -138,17 +126,29 @@ local function Stop_InstantStomp()
     local S = getgenv().SchmecktHubPC
     if S and S.InstantStomp_Destroy then pcall(S.InstantStomp_Destroy) S.InstantStomp_Destroy = nil end
     if S and S.Connections then
-        if S.Connections["InstantStompCore"] then 
-            for _, c in pairs(S.Connections["InstantStompCore"]) do pcall(function() c:Disconnect() end) end 
-            S.Connections["InstantStompCore"] = nil 
+        if S.Connections["InstantStompCore"] then
+            for _, c in pairs(S.Connections["InstantStompCore"]) do pcall(function() c:Disconnect() end) end
+            S.Connections["InstantStompCore"] = nil
         end
     end
     local g = CoreGui:FindFirstChild("Schmeckt_InstantStomp_UI") if g then g:Destroy() end
-    if lp and lp:FindFirstChild("PlayerGui") then 
-        local pgUI = lp.PlayerGui:FindFirstChild("Schmeckt_InstantStomp_UI") 
-        if pgUI then pgUI:Destroy() end 
+    if lp and lp:FindFirstChild("PlayerGui") then
+        local pgUI = lp.PlayerGui:FindFirstChild("Schmeckt_InstantStomp_UI")
+        if pgUI then pgUI:Destroy() end
     end
     local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring") if ring then ring:Destroy() end
+end
+
+local function Stop_TargetPanel()
+    local S = getgenv().SchmecktHubPC
+    if S and S.Connections and S.Connections["TargetScript"] then
+        for _, c in pairs(S.Connections["TargetScript"]) do pcall(function() c:Disconnect() end) end
+        S.Connections["TargetScript"] = nil
+    end
+    if lp and lp:FindFirstChild("PlayerGui") then
+        local tg = lp.PlayerGui:FindFirstChild("TargetGui")
+        if tg then tg:Destroy() end
+    end
 end
 
 local function EnableSilentAimFlags()
@@ -157,7 +157,6 @@ local function EnableSilentAimFlags()
     getgenv().SilentAim = true
     getgenv().SchmecktSilentAim = true
     getgenv().SilentAimActive = true
-    
     if Shared.SilentAimMethod == "FOV" then
         getgenv().SilentAimFOV = true
         getgenv().FOVSilentAim = true
@@ -179,23 +178,19 @@ local function DisableSilentAimFlags()
     getgenv().SilentAimActive = false
     getgenv().FOVSilentAim = false
     getgenv().QMethodSilentAim = false
-    
     local Mobile = getgenv().SchmecktHubMobile
     if Mobile then Mobile.SilentAim = false end
 end
 
 local function CleanupSilentAim()
     DisableSilentAimFlags()
-    
     local destroyFuncs = {
         "SilentAim_Q_Destroy", "SilentAim_FOV_Destroy", "DisableSilentAim", "StopSilentAim",
         "SilentAimDestroy", "DestroySilentAim", "SilentAim_Destroy", "FOV_Destroy", "Q_Destroy"
     }
-    
     for _, funcName in ipairs(destroyFuncs) do
         if getgenv()[funcName] then pcall(getgenv()[funcName]) getgenv()[funcName] = nil end
     end
-    
     if Shared and Shared.Connections then
         for key, list in pairs(Shared.Connections) do
             local keyLower = tostring(key):lower()
@@ -209,24 +204,20 @@ local function CleanupSilentAim()
             end
         end
     end
-    
     local connectionNames = {"SilentAimConnection", "SilentAimRender", "SilentAimLoop", "FOVConnection", "FOVRender", "QMethodConnection", "SilentRenderStep", "SilentHeartbeat"}
     for _, connName in ipairs(connectionNames) do
         if getgenv()[connName] then pcall(function() getgenv()[connName]:Disconnect() end) getgenv()[connName] = nil end
     end
-    
     local uiNames = {"Schmeckt_SilentAim_UI", "Schmeckt_SilentAim_FOV_UI", "SchmecktSilentAim", "SilentStatusQ", "SilentAimUI", "SilentAimFOV", "SilentAimGUI", "FOVCircleGUI", "SilentAim_GUI", "Silent_Aim_UI"}
     for _, n in ipairs(uiNames) do local g = CoreGui:FindFirstChild(n) if g then pcall(function() g:Destroy() end) end end
     if lp and lp:FindFirstChild("PlayerGui") then
         local pg = lp.PlayerGui
         for _, n in ipairs(uiNames) do local g2 = pg:FindFirstChild(n) if g2 then pcall(function() g2:Destroy() end) end end
     end
-    
     local drawingNames = {"SilentAimFOVCircle", "FOVCircle", "AimCircle", "SilentCircle"}
     for _, drawName in ipairs(drawingNames) do
         if getgenv()[drawName] then pcall(function() getgenv()[drawName]:Remove() end) getgenv()[drawName] = nil end
     end
-    
     local Mobile = getgenv().SchmecktHubMobile
     if Mobile and Mobile._MobileGUI then pcall(function() Mobile._MobileGUI:Destroy() end) Mobile._MobileGUI = nil end
 end
@@ -265,21 +256,15 @@ local function DisableAllScripts()
     Shared.AutoReload = false
     Shared.PlayerPanel = false
     Shared.DragShoot = false
-    Shared.AutoKatanaKill = false
-    Shared.Fling = false
-    Shared.HighlightTarget = false
-    Shared.ViewTarget = false
-    Shared.GotoTarget = false
+    Shared.TargetPanel = false
     Shared.InstantStomp = false
-    Shared.OPKill = false
-    Shared.Aura = false
     Shared.AntiFling = false
-    
     Stop_InstantStomp()
     Stop_SilentAim_All()
     Stop_Camlock_PC()
     Stop_Camlock_Mobile()
     Stop_AntiFling_External()
+    Stop_TargetPanel()
 end
 
 local function MainUI()
@@ -333,7 +318,7 @@ local function MainUI()
     BottomBar.Parent = ScreenGui
 
     local UICorner = Instance.new("UICorner"); UICorner.CornerRadius = UDim.new(0, 14 * SCALE); UICorner.Parent = BottomBar
-    
+
     local UIStroke = Instance.new("UIStroke")
     UIStroke.Color = Theme.Stroke
     UIStroke.Thickness = 2 * SCALE
@@ -366,7 +351,7 @@ local function MainUI()
     XLabel.Size = scaleUDim(28, 44)
     XLabel.Position = UDim2.new(0, 60 * SCALE, 0.5, -(22 * SCALE))
     XLabel.BackgroundTransparency = 1
-    XLabel.Text = "✕"
+    XLabel.Text = "X"
     XLabel.Font = Enum.Font.GothamBlack
     XLabel.TextSize = scaleSize(22)
     XLabel.TextColor3 = Theme.Purple
@@ -451,56 +436,48 @@ local function MainUI()
     task.spawn(function()
         local phase = 0
         colorCycleConnection = RunService.Heartbeat:Connect(function(dt)
-            if not BottomBar.Parent then 
+            if not BottomBar.Parent then
                 colorCycleConnection:Disconnect()
-                return 
+                return
             end
-            
             phase = (phase + dt * 0.8) % 1
-            
             local offset1 = phase
             local offset2 = (phase + 0.25) % 1
             local offset3 = (phase + 0.5) % 1
             local offset4 = (phase + 0.75) % 1
-            
             local function lerpColor(t)
                 local colors = {
-                    Color3.fromRGB(255, 20, 147),   -- Hot Pink
-                    Color3.fromRGB(220, 20, 60),    -- Crimson
-                    Color3.fromRGB(180, 50, 255),   -- Purple
-                    Color3.fromRGB(255, 105, 180),  -- Pink
+                    Color3.fromRGB(255, 20, 147),
+                    Color3.fromRGB(220, 20, 60),
+                    Color3.fromRGB(180, 50, 255),
+                    Color3.fromRGB(255, 105, 180),
                 }
                 local index = math.floor(t * #colors) + 1
                 local nextIndex = (index % #colors) + 1
                 local localT = (t * #colors) % 1
                 return colors[index]:Lerp(colors[nextIndex], localT)
             end
-            
             titleGrad.Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, lerpColor(offset1)),
                 ColorSequenceKeypoint.new(0.33, lerpColor(offset2)),
                 ColorSequenceKeypoint.new(0.66, lerpColor(offset3)),
                 ColorSequenceKeypoint.new(1, lerpColor(offset4))
             })
-            
             subGrad.Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, lerpColor(offset2)),
                 ColorSequenceKeypoint.new(0.5, lerpColor(offset3)),
                 ColorSequenceKeypoint.new(1, lerpColor(offset4))
             })
-            
             xGrad.Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, lerpColor(offset3)),
                 ColorSequenceKeypoint.new(0.5, lerpColor(offset4)),
                 ColorSequenceKeypoint.new(1, lerpColor(offset1))
             })
-            
             barStrokeGrad.Color = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, lerpColor(offset1)),
                 ColorSequenceKeypoint.new(0.5, lerpColor(offset2)),
                 ColorSequenceKeypoint.new(1, lerpColor(offset3))
             })
-            
             LogoStroke.Color = lerpColor(offset1)
             Logo2Stroke.Color = lerpColor(offset3)
             XStroke.Color = lerpColor(offset2)
@@ -569,7 +546,7 @@ local function MainUI()
     HubFrame.BackgroundTransparency = 0
     HubFrame.BorderSizePixel = 0
     HubFrame.Parent = ScreenGui
-    
+
     local HubCorner = Instance.new("UICorner"); HubCorner.CornerRadius = UDim.new(0, 16 * SCALE); HubCorner.Parent = HubFrame
     local HubStroke = Instance.new("UIStroke"); HubStroke.Color = Theme.Stroke; HubStroke.Transparency = 0; HubStroke.Thickness = 2 * SCALE; HubStroke.Parent = HubFrame
 
@@ -588,7 +565,7 @@ local function MainUI()
     CloseBtn.Position = UDim2.new(1, -(35 * SCALE), 0, 10 * SCALE)
     CloseBtn.BackgroundColor3 = Theme.Card
     CloseBtn.BackgroundTransparency = 0
-    CloseBtn.Text = "✕"
+    CloseBtn.Text = "X"
     CloseBtn.TextColor3 = Theme.Purple
     CloseBtn.Font = Enum.Font.GothamBlack
     CloseBtn.TextSize = scaleSize(14)
@@ -634,7 +611,7 @@ local function MainUI()
     HeaderText.Size = UDim2.new(1, -(24 * SCALE), 0, 35 * SCALE)
     HeaderText.Position = UDim2.new(0, 14 * SCALE, 0, 8 * SCALE)
     HeaderText.BackgroundTransparency = 1
-    HeaderText.Text = "✦ FEATURES"
+    HeaderText.Text = "FEATURES"
     HeaderText.Font = Enum.Font.GothamBlack
     HeaderText.TextSize = scaleSize(14)
     HeaderText.TextColor3 = Theme.Accent
@@ -650,7 +627,6 @@ local function MainUI()
     })
     headerTextGrad.Parent = HeaderText
 
-    -- Scroll Frame
     local Scroll = Instance.new("ScrollingFrame")
     Scroll.Name = "Scroll"
     Scroll.Size = UDim2.new(1, -(10 * SCALE), 1, -(60 * SCALE))
@@ -682,7 +658,7 @@ local function MainUI()
         SecText.Size = scaleUDim(250, 30)
         SecText.Position = UDim2.new(0, 0, 0, 0)
         SecText.BackgroundTransparency = 1
-        SecText.Text = "♦ " .. text
+        SecText.Text = text
         SecText.TextColor3 = Theme.Accent
         SecText.Font = Enum.Font.GothamBlack
         SecText.TextSize = scaleSize(11)
@@ -780,7 +756,6 @@ local function MainUI()
             local targetX = enabled and (25 * SCALE) or (3 * SCALE)
             local targetColor = enabled and Theme.Purple or Color3.fromRGB(40, 20, 30)
             local glowThickness = enabled and 2 or 0
-
             TweenService:Create(Circle, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Position = UDim2.new(0, targetX, 0.5, -(9 * SCALE))}):Play()
             TweenService:Create(SwitchBg, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundColor3 = targetColor}):Play()
             TweenService:Create(CircleGlow, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Thickness = glowThickness}):Play()
@@ -848,6 +823,7 @@ local function MainUI()
     CreateSwitch("Auto Armor", Shared.AutoArmor, function(s) Shared.AutoArmor = s if s then Load_AutoArmor() end end)
     CreateSwitch("Staff Notifier", Shared.StaffNotifier, function(s) Shared.StaffNotifier = s if s then Load_StaffNotifier() end end)
     CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) Shared.PlayerPanel = s if s then Load_PlayerPanel() end end)
+    CreateSwitch("Target Panel", Shared.TargetPanel, function(s) Shared.TargetPanel = s if s then Load_Target() else Stop_TargetPanel() end end)
     CreateSwitch("Anti Fling", Shared.AntiFling, function(s) Shared.AntiFling = s if s then Load_AntiFling() end end)
     CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s) Shared.InstantStomp = s if s then Load_InstantStomp() else Stop_InstantStomp() end end)
     CreateSwitch("Auto Reload", Shared.AutoReload, function(s) Shared.AutoReload = s if s then Load_AutoReload_S() end end)
@@ -867,7 +843,7 @@ local function MainUI()
     Instance.new("UICorner", AimWarnLabel).CornerRadius = UDim.new(0, 8 * SCALE)
 
     local function FlashAimWarn(txt)
-        AimWarnLabel.Text = "⚠ " .. txt
+        AimWarnLabel.Text = txt
         AimWarnLabel.Visible = true
         task.delay(2.5, function() if AimWarnLabel then AimWarnLabel.Visible = false end end)
     end
@@ -1011,50 +987,6 @@ local function MainUI()
     CreateSwitch("Triggerbot", Shared.TriggerBot, function(s) Shared.TriggerBot = s if s then Load_TriggerBot() end end)
     CreateSwitch("Drag Shoot", Shared.DragShoot, function(s) Shared.DragShoot = s if s then Load_DragShoot() end end)
 
-    CreateSection("TARGET")
-
-    local tBoxWrapper = Instance.new("Frame")
-    tBoxWrapper.BackgroundTransparency = 1
-    tBoxWrapper.Size = scaleUDim(250, 40)
-    tBoxWrapper.Parent = Scroll
-
-    local tBox = Instance.new("TextBox")
-    tBox.Size = UDim2.new(1, 0, 1, -(4 * SCALE))
-    tBox.Position = UDim2.new(0, 0, 0, 2 * SCALE)
-    tBox.BackgroundColor3 = Theme.Card
-    tBox.Text = Shared.TargetUsername or ""
-    tBox.PlaceholderText = "Enter player name..."
-    tBox.TextColor3 = Theme.Text
-    tBox.PlaceholderColor3 = Theme.SubText
-    tBox.Font = Enum.Font.GothamMedium
-    tBox.TextSize = scaleSize(12)
-    tBox.Parent = tBoxWrapper
-    Instance.new("UICorner", tBox).CornerRadius = UDim.new(0, 10 * SCALE)
-    local tBoxStroke = Instance.new("UIStroke"); tBoxStroke.Color = Theme.Stroke; tBoxStroke.Thickness = 1.5 * SCALE; tBoxStroke.Parent = tBox
-
-    tBox.Focused:Connect(function()
-        TweenService:Create(tBoxStroke, TweenInfo.new(0.2), {Color = Theme.Purple}):Play()
-    end)
-    tBox.FocusLost:Connect(function()
-        TweenService:Create(tBoxStroke, TweenInfo.new(0.2), {Color = Theme.Stroke}):Play()
-        local txt = tBox.Text
-        for _, p in pairs(Players:GetPlayers()) do
-            if string.find(string.lower(p.Name), string.lower(txt)) or string.find(string.lower(p.DisplayName), string.lower(txt)) then
-                Shared.TargetUsername = p.Name
-                tBox.Text = p.Name
-                break
-            end
-        end
-    end)
-
-    CreateSwitch("View Target", Shared.ViewTarget, function(s) Shared.ViewTarget = s Load_Target() end)
-    CreateSwitch("Highlight", Shared.HighlightTarget, function(s) Shared.HighlightTarget = s Load_Target() end)
-    CreateSwitch("Auto Katana", Shared.AutoKatanaKill, function(s) Shared.AutoKatanaKill = s Load_Target() end)
-    CreateSwitch("Fling Target", Shared.Fling, function(s) Shared.Fling = s Load_Target() end)
-    CreateSwitch("OP Kill", Shared.OPKill, function(s) Shared.OPKill = s Load_Target() end)
-    CreateSwitch("Aura", Shared.Aura, function(s) Shared.Aura = s Load_Target() end)
-    CreateButton("Teleport to Target", function() Shared.GotoTarget = true Load_Target() end)
-
     CreateSection("SYSTEM")
 
     local PlatRow = Instance.new("Frame")
@@ -1092,7 +1024,7 @@ local function MainUI()
     RestartLabel.Size = scaleUDim(250, 24)
     RestartLabel.BackgroundColor3 = Theme.Card
     RestartLabel.BackgroundTransparency = 0.3
-    RestartLabel.Text = "⟳ Click Restart to apply"
+    RestartLabel.Text = "Click Restart to apply"
     RestartLabel.TextColor3 = Theme.Purple
     RestartLabel.Font = Enum.Font.GothamBold
     RestartLabel.TextSize = scaleSize(10)
@@ -1107,7 +1039,6 @@ local function MainUI()
         MobStroke2.Color = (Shared.Platform == "Mobile") and Theme.PurpleLight or Theme.Stroke
         SubTitle.Text = Shared.Platform .. " Edition | newbois!"
         RestartLabel.Visible = true
-
         if Shared.SilentAim then
             Stop_SilentAim_All()
             AimSwitch.Set(false)
@@ -1129,7 +1060,6 @@ local function MainUI()
         Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (70 * SCALE))
     end)
 
-    -- Dragging HubFrame
     local draggingHub, dragInputHub, dragStartHub, startPosHub
     HubFrame.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1198,8 +1128,9 @@ task.defer(function()
     if Shared.TriggerBot then Load_TriggerBot() end
     if Shared.StaffNotifier then Load_StaffNotifier() end
     if Shared.PlayerPanel then Load_PlayerPanel() end
-    if Shared.Camlock then 
-        if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end 
+    if Shared.TargetPanel then Load_Target() end
+    if Shared.Camlock then
+        if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
     end
     if Shared.AntiFling then Load_AntiFling() end
     if Shared.AutoReload then Load_AutoReload_S() end
