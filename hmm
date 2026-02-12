@@ -151,6 +151,30 @@ local function Stop_TargetPanel()
     end
 end
 
+local function Stop_PlayerPanel()
+    local S = getgenv().SchmecktHubPC
+    if S and S.Connections and S.Connections["PlayerPanel"] then
+        for _, c in pairs(S.Connections["PlayerPanel"]) do pcall(function() c:Disconnect() end) end
+        S.Connections["PlayerPanel"] = nil
+    end
+    local g = CoreGui:FindFirstChild("SchmecktPlayerPanel") 
+    if g then g:Destroy() end
+end
+
+local function Stop_StaffNotifier()
+    local S = getgenv().SchmecktHubPC
+    if S and S.Connections and S.Connections["StaffNotifier"] then
+        for _, c in pairs(S.Connections["StaffNotifier"]) do pcall(function() c:Disconnect() end) end
+        S.Connections["StaffNotifier"] = nil
+    end
+    if lp and lp:FindFirstChild("PlayerGui") then
+        local sn = lp.PlayerGui:FindFirstChild("StaffNotifierGui")
+        if sn then sn:Destroy() end
+        local sl = lp.PlayerGui:FindFirstChild("StaffListGui")
+        if sl then sl:Destroy() end
+    end
+end
+
 local function EnableSilentAimFlags()
     Shared.SilentAim = true
     getgenv().SilentAimEnabled = true
@@ -265,6 +289,43 @@ local function DisableAllScripts()
     Stop_Camlock_Mobile()
     Stop_AntiFling_External()
     Stop_TargetPanel()
+    Stop_PlayerPanel()
+    Stop_StaffNotifier()
+end
+
+local function ReloadAllScripts()
+    Stop_InstantStomp()
+    Stop_SilentAim_All()
+    Stop_Camlock_PC()
+    Stop_Camlock_Mobile()
+    Stop_TargetPanel()
+    Stop_PlayerPanel()
+    Stop_StaffNotifier()
+    
+    task.wait(0.2)
+    
+    if Shared.InstantStomp then Load_InstantStomp() end
+    if Shared.AutoArmor then Load_AutoArmor() end
+    if Shared.StaffNotifier then Load_StaffNotifier() end
+    if Shared.PlayerPanel then Load_PlayerPanel() end
+    if Shared.TargetPanel then Load_Target() end
+    if Shared.AutoReload then Load_AutoReload_S() end
+    if Shared.DragShoot then Load_DragShoot() end
+    if Shared.TriggerBot then Load_TriggerBot() end
+    if Shared.AntiFling then Load_AntiFling() end
+    
+    if Shared.SilentAim and Shared.SilentAimMethod then
+        EnableSilentAimFlags()
+        Load_SilentAim_ByMethod()
+    end
+    
+    if Shared.Camlock then
+        if Shared.Platform == "Mobile" then 
+            Load_Camlock_Mobile() 
+        else 
+            Load_Camlock() 
+        end
+    end
 end
 
 local function MainUI()
@@ -689,11 +750,10 @@ local function MainUI()
             ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 50, 255)),
             ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
         })
-        lineGrad.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0),
-            NumberSequenceKeypoint.new(1, 0.8)
-        })
-        lineGrad.Parent = SecLine
+lineGrad.Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0),
+    NumberSequenceKeypoint.new(1, 0.8)
+})
 
         return SecFrame
     end
@@ -821,8 +881,8 @@ local function MainUI()
 
     CreateSection("MAIN SETTINGS")
     CreateSwitch("Auto Armor", Shared.AutoArmor, function(s) Shared.AutoArmor = s if s then Load_AutoArmor() end end)
-    CreateSwitch("Staff Notifier", Shared.StaffNotifier, function(s) Shared.StaffNotifier = s if s then Load_StaffNotifier() end end)
-    CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) Shared.PlayerPanel = s if s then Load_PlayerPanel() end end)
+    CreateSwitch("Staff Notifier", Shared.StaffNotifier, function(s) Shared.StaffNotifier = s if s then Load_StaffNotifier() else Stop_StaffNotifier() end end)
+    CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) Shared.PlayerPanel = s if s then Load_PlayerPanel() else Stop_PlayerPanel() end end)
     CreateSwitch("Target Panel", Shared.TargetPanel, function(s) Shared.TargetPanel = s if s then Load_Target() else Stop_TargetPanel() end end)
     CreateSwitch("Anti Fling", Shared.AntiFling, function(s) Shared.AntiFling = s if s then Load_AntiFling() end end)
     CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s) Shared.InstantStomp = s if s then Load_InstantStomp() else Stop_InstantStomp() end end)
@@ -1052,7 +1112,12 @@ local function MainUI()
     MobBtn.MouseButton1Click:Connect(function() Shared.Platform = "Mobile" updatePlatBtns() end)
 
     CreateButton("Close GUI", function() DisableAllScripts(); Shared.SaveConfig(); ScreenGui:Destroy() end)
-    CreateButton("Restart GUI", function() ScreenGui:Destroy(); Shared.SaveConfig(); MainUI() end)
+    CreateButton("Restart GUI", function() 
+        ScreenGui:Destroy(); 
+        Shared.SaveConfig(); 
+        ReloadAllScripts();
+        MainUI() 
+    end)
 
     local UIList2 = Scroll:FindFirstChildOfClass("UIListLayout")
     Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (70 * SCALE))
