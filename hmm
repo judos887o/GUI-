@@ -1,16 +1,16 @@
 local TweenService = game:GetService("TweenService")
-local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local Stats = game:GetService("Stats")
+local Workspace = game:GetService("Workspace")
+local SoundService = game:GetService("SoundService")
 
 local lp = Players.LocalPlayer
-local LOGO_ASSET = "rbxassetid://121759217057084"
-local LOGO2_ASSET = "rbxassetid://118676632373972"
+local INTRO_LOGO_ASSET = "rbxassetid://121759217057084"
+local CLICK_SOUND_ID = "rbxassetid://100809160609628"
 
 getgenv().SchmecktHubPC = getgenv().SchmecktHubPC or {}
 local Shared = getgenv().SchmecktHubPC
@@ -25,17 +25,17 @@ Shared.SilentAimMethod = Shared.SilentAimMethod
 Shared.AutoReload = Shared.AutoReload or false
 Shared.PlayerPanel = Shared.PlayerPanel or false
 Shared.DragShoot = Shared.DragShoot or false
-Shared.TargetPanel = Shared.TargetPanel or false
 Shared.InstantStomp = Shared.InstantStomp or false
 Shared.AntiFling = Shared.AntiFling or false
-Shared.VisualPanel = Shared.VisualPanel or false
 Shared.PurchasePanel = Shared.PurchasePanel or false
 Shared.Platform = Shared.Platform or "PC"
 Shared.Connections = Shared.Connections or {}
 Shared.ShadowPepperUsers = Shared.ShadowPepperUsers or {}
+Shared.TargetTabContainer = nil
+Shared.VisualsTabContainer = nil
 
 local CONFIG_DIR = "SchmecktHub"
-local CONFIG_FILE = CONFIG_DIR .. "/config.json"
+local CONFIG_FILE = CONFIG_DIR .. "/config_ghost_red.json"
 local FS_OK = (typeof(isfile) == "function" and typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(makefolder) == "function" and typeof(isfolder) == "function")
 
 local function serializeConfig()
@@ -51,10 +51,8 @@ local function serializeConfig()
             AutoReload = Shared.AutoReload,
             PlayerPanel = Shared.PlayerPanel,
             DragShoot = Shared.DragShoot,
-            TargetPanel = Shared.TargetPanel,
             InstantStomp = Shared.InstantStomp,
             AntiFling = Shared.AntiFling,
-            VisualPanel = Shared.VisualPanel,
             PurchasePanel = Shared.PurchasePanel,
         }
     }
@@ -89,7 +87,7 @@ end
 local function LoadConfig()
     local raw
     if FS_OK and isfile(CONFIG_FILE) then
-        raw = readfile(CONFIG_FILE)
+        pcall(function() raw = readfile(CONFIG_FILE) end)
     elseif getgenv()._SchmecktLastCfg then
         raw = getgenv()._SchmecktLastCfg
     end
@@ -98,8 +96,22 @@ local function LoadConfig()
         if ok and data then applyConfig(data) end
     end
 end
-
 LoadConfig()
+
+local clickSound = Instance.new("Sound")
+clickSound.SoundId = CLICK_SOUND_ID
+clickSound.Volume = 0.5
+clickSound.PlayOnRemove = false
+clickSound.Parent = SoundService
+
+local function playClick()
+    task.spawn(function()
+        pcall(function()
+            clickSound:Stop()
+            clickSound:Play()
+        end)
+    end)
+end
 
 local function safeLoad(url)
     task.spawn(function()
@@ -119,13 +131,13 @@ local function Load_Internal_Q_Method() safeLoad("https://raw.githubusercontent.
 local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/main/teat") end
 local function Load_AutoReload_S() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/main/teat") end
 local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/main/teat") end
-local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/targer/refs/heads/main/asd") end
+local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/test-target/refs/heads/main/as") end
+local function Load_Visual() safeLoad("https://raw.githubusercontent.com/judos887o/test-visual/refs/heads/main/a") end
 local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/main/teat") end
 local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/main/teat") end
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/main/teats") end
 local function Load_AntiFling() safeLoad("https://raw.githubusercontent.com/judos887o/ANTI-FL/main/te") end
 local function Load_ShadowPepperUsers() safeLoad("https://raw.githubusercontent.com/judos887o/user/refs/heads/main/a") end
-local function Load_VisualPanel() safeLoad("https://raw.githubusercontent.com/judos887o/visual-panel-/refs/heads/main/a") end
 local function Load_PurchasePanel() safeLoad("https://raw.githubusercontent.com/judos887o/purchased/refs/heads/main/a") end
 
 local function Stop_PurchasePanel()
@@ -135,22 +147,6 @@ local function Stop_PurchasePanel()
         S.Connections["PurchasePanel"] = nil
     end
     local g = CoreGui:FindFirstChild("SchmecktPurchasePanel") if g then g:Destroy() end
-end
-
-local function Stop_VisualPanel()
-    local S = getgenv().SchmecktHubPC
-    if S and S.Connections and S.Connections["SchmecktESP"] then
-        for _, c in pairs(S.Connections["SchmecktESP"]) do pcall(function() c:Disconnect() end) end
-        S.Connections["SchmecktESP"] = nil
-    end
-    local g = CoreGui:FindFirstChild("SchmecktESPPanel") if g then g:Destroy() end
-    local o = CoreGui:FindFirstChild("SchmecktESPOverlay") if o then o:Destroy() end
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr.Character then
-            local hl = plr.Character:FindFirstChild("SchmecktHighlight")
-            if hl then hl:Destroy() end
-        end
-    end
 end
 
 local function Stop_InstantStomp()
@@ -170,18 +166,6 @@ local function Stop_InstantStomp()
         if isGui then isGui:Destroy() end
     end
     local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring") if ring then ring:Destroy() end
-end
-
-local function Stop_TargetPanel()
-    local S = getgenv().SchmecktHubPC
-    if S and S.Connections and S.Connections["TargetScript"] then
-        for _, c in pairs(S.Connections["TargetScript"]) do pcall(function() c:Disconnect() end) end
-        S.Connections["TargetScript"] = nil
-    end
-    if lp and lp:FindFirstChild("PlayerGui") then
-        local tg = lp.PlayerGui:FindFirstChild("TargetGui")
-        if tg then tg:Destroy() end
-    end
 end
 
 local function Stop_PlayerPanel()
@@ -313,44 +297,40 @@ local function DisableAllScripts()
     Shared.AutoReload = false
     Shared.PlayerPanel = false
     Shared.DragShoot = false
-    Shared.TargetPanel = false
     Shared.InstantStomp = false
     Shared.AntiFling = false
-    Shared.VisualPanel = false
     Shared.PurchasePanel = false
     Stop_InstantStomp()
     Stop_SilentAim_All()
     Stop_Camlock_PC()
     Stop_Camlock_Mobile()
     Stop_AntiFling_External()
-    Stop_TargetPanel()
     Stop_PlayerPanel()
     Stop_StaffNotifier()
-    Stop_VisualPanel()
     Stop_PurchasePanel()
 end
 
-local function ReloadAllScripts()
+local function StopAllWithoutDisabling()
     Stop_InstantStomp()
     Stop_SilentAim_All()
     Stop_Camlock_PC()
     Stop_Camlock_Mobile()
-    Stop_TargetPanel()
     Stop_PlayerPanel()
     Stop_StaffNotifier()
-    Stop_VisualPanel()
     Stop_PurchasePanel()
+end
+
+local function ReloadAllScripts()
+    StopAllWithoutDisabling()
     task.wait(0.2)
     if Shared.InstantStomp then Load_InstantStomp() end
     if Shared.AutoArmor then Load_AutoArmor() end
     if Shared.StaffNotifier then Load_StaffNotifier() end
     if Shared.PlayerPanel then Load_PlayerPanel() end
-    if Shared.TargetPanel then Load_Target() end
     if Shared.AutoReload then Load_AutoReload_S() end
     if Shared.DragShoot then Load_DragShoot() end
     if Shared.TriggerBot then Load_TriggerBot() end
     if Shared.AntiFling then Load_AntiFling() end
-    if Shared.VisualPanel then Load_VisualPanel() end
     if Shared.PurchasePanel then Load_PurchasePanel() end
     if Shared.SilentAim and Shared.SilentAimMethod then
         EnableSilentAimFlags()
@@ -361,780 +341,888 @@ local function ReloadAllScripts()
     end
 end
 
-local function MainUI()
-    if CoreGui:FindFirstChild("MeuliosUI") then CoreGui.MeuliosUI:Destroy() end
+local function CreateUI()
+    if CoreGui:FindFirstChild("SchmecktHub_UI_Red") then CoreGui.SchmecktHub_UI_Red:Destroy() end
 
-    local SCALE = 1
-    if Shared.Platform == "Mobile" or UserInputService.TouchEnabled then
-        SCALE = 1 / 1.5
-    end
+    local IS_MOBILE = Shared.Platform == "Mobile" or UserInputService.TouchEnabled
+    local SCALE = IS_MOBILE and 0.5 or 1
 
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "MeuliosUI"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = CoreGui
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    local COL_OFF = Color3.fromRGB(60, 0, 0)
+    local COL_ON = Color3.fromRGB(255, 60, 60)
+    local COL_STROKE_OFF = Color3.fromRGB(120, 30, 30)
+    local COL_STROKE_ON = Color3.fromRGB(255, 180, 180)
+    local COL_TEXT_OFF = Color3.fromRGB(180, 130, 130)
+    local COL_TEXT_ON = Color3.fromRGB(255, 255, 255)
 
-    local Theme = {
-        Background = Color3.fromRGB(20, 5, 15),
-        Card = Color3.fromRGB(45, 12, 35),
-        Accent = Color3.fromRGB(255, 20, 147),
-        AccentSecondary = Color3.fromRGB(220, 20, 60),
-        Purple = Color3.fromRGB(180, 50, 255),
-        PurpleLight = Color3.fromRGB(220, 130, 255),
-        Text = Color3.fromRGB(255, 255, 255),
-        SubText = Color3.fromRGB(255, 150, 180),
-        Stroke = Color3.fromRGB(150, 30, 100),
-        StrokeLight = Color3.fromRGB(255, 105, 180),
-        Shadow = Color3.fromRGB(0, 0, 0),
-        Glow = Color3.fromRGB(255, 100, 180)
+    local THEME = {
+        BgMain       = Color3.fromRGB(90, 0, 0),
+        BgTop        = Color3.fromRGB(140, 0, 0),
+        BgInner      = Color3.fromRGB(120, 0, 0),
+        Sidebar      = Color3.fromRGB(110, 0, 0),
+        Content      = Color3.fromRGB(120, 0, 0),
+        Card         = Color3.fromRGB(135, 0, 0),
+        Card2        = Color3.fromRGB(150, 0, 0),
+        SectionBg    = Color3.fromRGB(100, 0, 0),
+        Stroke1      = Color3.fromRGB(255, 110, 110),
+        Stroke2      = Color3.fromRGB(255, 150, 150),
+        TabIdle      = Color3.fromRGB(140, 0, 0),
+        TabActive    = Color3.fromRGB(185, 0, 0),
+        ToggleOff    = Color3.fromRGB(175, 50, 120),
+        ToggleOn     = Color3.fromRGB(220, 70, 160),
+        Text         = Color3.fromRGB(255, 255, 255),
+        SubText      = Color3.fromRGB(255, 210, 210),
+        DimText      = Color3.fromRGB(255, 170, 170),
+        Warn         = Color3.fromRGB(255, 200, 100),
+        DevText      = Color3.fromRGB(200, 160, 160),
     }
 
-    local function scaleUDim(x, y) return UDim2.new(0, x * SCALE, 0, y * SCALE) end
-    local function scaleSize(s) return math.floor(s * SCALE) end
+    local function s(v) return math.floor(v * SCALE) end
 
-    local BottomBar = Instance.new("Frame")
-    BottomBar.Name = "BottomBar"
-    BottomBar.Size = scaleUDim(570, 65)
-    BottomBar.Position = UDim2.new(0.5, -(285 * SCALE), 1, -(163 * SCALE))
-    BottomBar.BackgroundColor3 = Theme.Background
-    BottomBar.BorderSizePixel = 0
-    BottomBar.Parent = ScreenGui
-
-    local UICorner = Instance.new("UICorner"); UICorner.CornerRadius = UDim.new(0, 14 * SCALE); UICorner.Parent = BottomBar
-
-    local UIStroke = Instance.new("UIStroke")
-    UIStroke.Color = Theme.Stroke
-    UIStroke.Thickness = 2 * SCALE
-    UIStroke.Transparency = 0
-    UIStroke.Parent = BottomBar
-
-    local barStrokeGrad = Instance.new("UIGradient")
-    barStrokeGrad.Rotation = 45
-    barStrokeGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
-    })
-    barStrokeGrad.Parent = UIStroke
-
-    local Logo = Instance.new("ImageLabel")
-    Logo.Name = "Logo"
-    Logo.Size = scaleUDim(44, 44)
-    Logo.Position = UDim2.new(0, 12 * SCALE, 0.5, -(22 * SCALE))
-    Logo.BackgroundColor3 = Theme.Card
-    Logo.BackgroundTransparency = 0
-    Logo.Image = LOGO_ASSET
-    Logo.ScaleType = Enum.ScaleType.Crop
-    Logo.Parent = BottomBar
-    Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 10 * SCALE)
-    local LogoStroke = Instance.new("UIStroke"); LogoStroke.Color = Theme.Accent; LogoStroke.Thickness = 2 * SCALE; LogoStroke.Parent = Logo
-
-    local XLabel = Instance.new("TextLabel")
-    XLabel.Name = "XLabel"
-    XLabel.Size = scaleUDim(28, 44)
-    XLabel.Position = UDim2.new(0, 60 * SCALE, 0.5, -(22 * SCALE))
-    XLabel.BackgroundTransparency = 1
-    XLabel.Text = "X"
-    XLabel.Font = Enum.Font.GothamBlack
-    XLabel.TextSize = scaleSize(22)
-    XLabel.TextColor3 = Theme.Purple
-    XLabel.Parent = BottomBar
-
-    local XStroke = Instance.new("UIStroke")
-    XStroke.Color = Theme.PurpleLight
-    XStroke.Thickness = 1.5
-    XStroke.Transparency = 0.3
-    XStroke.Parent = XLabel
-
-    local Logo2 = Instance.new("ImageLabel")
-    Logo2.Name = "Logo2"
-    Logo2.Size = scaleUDim(40, 40)
-    Logo2.Position = UDim2.new(0, 90 * SCALE, 0.5, -(20 * SCALE))
-    Logo2.BackgroundTransparency = 1
-    Logo2.Image = LOGO2_ASSET
-    Logo2.ScaleType = Enum.ScaleType.Fit
-    Logo2.Parent = BottomBar
-    Instance.new("UICorner", Logo2).CornerRadius = UDim.new(1, 0)
-    local Logo2Stroke = Instance.new("UIStroke"); Logo2Stroke.Color = Theme.Purple; Logo2Stroke.Thickness = 2 * SCALE; Logo2Stroke.Parent = Logo2
-
-    local Title = Instance.new("TextLabel")
-    Title.Name = "Title"
-    Title.Size = scaleUDim(300, 24)
-    Title.Position = UDim2.new(0, 140 * SCALE, 0, 10 * SCALE)
-    Title.BackgroundTransparency = 1
-    Title.Text = "Meulios + ShadowPepper Hub"
-    Title.Font = Enum.Font.GothamBlack
-    Title.TextSize = scaleSize(15)
-    Title.TextColor3 = Theme.Accent
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = BottomBar
-
-    local titleGrad = Instance.new("UIGradient")
-    titleGrad.Rotation = 45
-    titleGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
-        ColorSequenceKeypoint.new(0.4, Color3.fromRGB(180, 50, 255)),
-        ColorSequenceKeypoint.new(0.6, Color3.fromRGB(220, 130, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
-    })
-    titleGrad.Parent = Title
-
-    local TitleStroke = Instance.new("UIStroke")
-    TitleStroke.Color = Color3.fromRGB(80, 0, 60)
-    TitleStroke.Thickness = 1
-    TitleStroke.Transparency = 0.5
-    TitleStroke.Parent = Title
-
-    local SubTitle = Instance.new("TextLabel")
-    SubTitle.Name = "SubTitle"
-    SubTitle.Size = scaleUDim(300, 15)
-    SubTitle.Position = UDim2.new(0, 140 * SCALE, 0, 35 * SCALE)
-    SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = Shared.Platform .. " Edition | developed by schmeckt"
-    SubTitle.Font = Enum.Font.GothamMedium
-    SubTitle.TextSize = scaleSize(11)
-    SubTitle.TextColor3 = Theme.SubText
-    SubTitle.TextXAlignment = Enum.TextXAlignment.Left
-    SubTitle.Parent = BottomBar
-
-    local subGrad = Instance.new("UIGradient")
-    subGrad.Rotation = -45
-    subGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 150, 180)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 130, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
-    })
-    subGrad.Parent = SubTitle
-
-    local StatsFrame = Instance.new("Frame")
-    StatsFrame.Size = UDim2.new(0, 110 * SCALE, 0, 48 * SCALE)
-    StatsFrame.Position = UDim2.new(1, -(175 * SCALE), 0.5, -(24 * SCALE))
-    StatsFrame.BackgroundColor3 = Theme.Card
-    StatsFrame.BorderSizePixel = 0
-    StatsFrame.Parent = BottomBar
-    Instance.new("UICorner", StatsFrame).CornerRadius = UDim.new(0, 10 * SCALE)
-    local StatsStroke = Instance.new("UIStroke"); StatsStroke.Color = Theme.Stroke; StatsStroke.Thickness = 1; StatsStroke.Parent = StatsFrame
-
-    local StatsLabel = Instance.new("TextLabel")
-    StatsLabel.Name = "Stats"
-    StatsLabel.Size = UDim2.new(1, -(16 * SCALE), 1, 0)
-    StatsLabel.Position = UDim2.new(0, 8 * SCALE, 0, 0)
-    StatsLabel.BackgroundTransparency = 1
-    StatsLabel.Text = "FPS: --\nPing: --"
-    StatsLabel.Font = Enum.Font.GothamBold
-    StatsLabel.TextSize = scaleSize(11)
-    StatsLabel.TextColor3 = Theme.Text
-    StatsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    StatsLabel.Parent = StatsFrame
-
-    task.spawn(function()
-        while BottomBar.Parent do
-            local fps = math.floor(1 / (RunService.RenderStepped:Wait() + 0.001))
-            local ping = 0
-            pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-            StatsLabel.Text = "FPS: " .. fps .. "\nPing: " .. ping .. "ms"
-            task.wait(1)
-        end
-    end)
-
-    local MinBtn = Instance.new("TextButton")
-    MinBtn.Name = "Minimize"
-    MinBtn.Size = scaleUDim(34, 34)
-    MinBtn.Position = UDim2.new(1, -(52 * SCALE), 0.5, -(17 * SCALE))
-    MinBtn.BackgroundColor3 = Theme.Purple
-    MinBtn.Text = "-"
-    MinBtn.TextColor3 = Theme.Text
-    MinBtn.Font = Enum.Font.GothamBlack
-    MinBtn.TextSize = scaleSize(24)
-    MinBtn.Parent = BottomBar
-    Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 8 * SCALE)
-    local MinStroke = Instance.new("UIStroke"); MinStroke.Color = Theme.PurpleLight; MinStroke.Thickness = 2 * SCALE; MinStroke.Parent = MinBtn
-
-    local HubFrameShadow = Instance.new("Frame")
-    HubFrameShadow.Name = "HubFrameShadow"
-    HubFrameShadow.Size = scaleUDim(285, 500)
-    HubFrameShadow.Position = UDim2.new(1, -(300 * SCALE), 0.5, -(410 * SCALE))
-    HubFrameShadow.BackgroundColor3 = Theme.Shadow
-    HubFrameShadow.BackgroundTransparency = 0.5
-    HubFrameShadow.BorderSizePixel = 0
-    HubFrameShadow.Parent = ScreenGui
-    Instance.new("UICorner", HubFrameShadow).CornerRadius = UDim.new(0, 18 * SCALE)
-
-    local HubFrame = Instance.new("Frame")
-    HubFrame.Name = "HubFrame"
-    HubFrame.Size = scaleUDim(275, 490)
-    HubFrame.Position = UDim2.new(1, -(295 * SCALE), 0.5, -(405 * SCALE))
-    HubFrame.BackgroundColor3 = Theme.Background
-    HubFrame.BackgroundTransparency = 0
-    HubFrame.BorderSizePixel = 0
-    HubFrame.Parent = ScreenGui
-
-    local HubCorner = Instance.new("UICorner"); HubCorner.CornerRadius = UDim.new(0, 16 * SCALE); HubCorner.Parent = HubFrame
-    local HubStroke = Instance.new("UIStroke"); HubStroke.Color = Theme.Stroke; HubStroke.Transparency = 0; HubStroke.Thickness = 2 * SCALE; HubStroke.Parent = HubFrame
-
-    local hubStrokeGrad = Instance.new("UIGradient")
-    hubStrokeGrad.Rotation = 90
-    hubStrokeGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
-    })
-    hubStrokeGrad.Parent = HubStroke
-
-    local CloseBtn = Instance.new("TextButton")
-    CloseBtn.Name = "Close"
-    CloseBtn.Size = scaleUDim(28, 28)
-    CloseBtn.Position = UDim2.new(1, -(35 * SCALE), 0, 10 * SCALE)
-    CloseBtn.BackgroundColor3 = Theme.Card
-    CloseBtn.BackgroundTransparency = 0
-    CloseBtn.Text = "X"
-    CloseBtn.TextColor3 = Theme.Purple
-    CloseBtn.Font = Enum.Font.GothamBlack
-    CloseBtn.TextSize = scaleSize(14)
-    CloseBtn.Parent = HubFrame
-    Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 8 * SCALE)
-    local CloseStroke = Instance.new("UIStroke"); CloseStroke.Color = Theme.Purple; CloseStroke.Thickness = 1 * SCALE; CloseStroke.Parent = CloseBtn
-
-    MinBtn.MouseButton1Click:Connect(function()
-        HubFrame.Visible = not HubFrame.Visible
-        HubFrameShadow.Visible = HubFrame.Visible
-    end)
-
-    CloseBtn.MouseButton1Click:Connect(function()
-        HubFrame.Visible = false
-        HubFrameShadow.Visible = false
-    end)
-
-    local HeaderBg = Instance.new("Frame")
-    HeaderBg.Size = UDim2.new(1, 0, 0, 50 * SCALE)
-    HeaderBg.BackgroundColor3 = Theme.Card
-    HeaderBg.BackgroundTransparency = 0
-    HeaderBg.BorderSizePixel = 0
-    HeaderBg.Parent = HubFrame
-    Instance.new("UICorner", HeaderBg).CornerRadius = UDim.new(0, 16 * SCALE)
-
-    local headerGradFrame = Instance.new("Frame")
-    headerGradFrame.Size = UDim2.new(1, 0, 1, 0)
-    headerGradFrame.BackgroundColor3 = Theme.Purple
-    headerGradFrame.BackgroundTransparency = 0.88
-    headerGradFrame.BorderSizePixel = 0
-    headerGradFrame.Parent = HeaderBg
-    Instance.new("UICorner", headerGradFrame).CornerRadius = UDim.new(0, 16 * SCALE)
-
-    local hGrad = Instance.new("UIGradient")
-    hGrad.Rotation = 0
-    hGrad.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(1, 1)
-    })
-    hGrad.Parent = headerGradFrame
-
-    local HeaderText = Instance.new("TextLabel")
-    HeaderText.Size = UDim2.new(1, -(24 * SCALE), 0, 35 * SCALE)
-    HeaderText.Position = UDim2.new(0, 14 * SCALE, 0, 8 * SCALE)
-    HeaderText.BackgroundTransparency = 1
-    HeaderText.Text = "FEATURES"
-    HeaderText.Font = Enum.Font.GothamBlack
-    HeaderText.TextSize = scaleSize(14)
-    HeaderText.TextColor3 = Theme.Accent
-    HeaderText.TextXAlignment = Enum.TextXAlignment.Left
-    HeaderText.Parent = HubFrame
-
-    local headerTextGrad = Instance.new("UIGradient")
-    headerTextGrad.Rotation = 0
-    headerTextGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
-    })
-    headerTextGrad.Parent = HeaderText
-
-    local Scroll = Instance.new("ScrollingFrame")
-    Scroll.Name = "Scroll"
-    Scroll.Size = UDim2.new(1, -(10 * SCALE), 1, -(60 * SCALE))
-    Scroll.Position = UDim2.new(0, 5 * SCALE, 0, 52 * SCALE)
-    Scroll.BackgroundTransparency = 1
-    Scroll.BorderSizePixel = 0
-    Scroll.ScrollBarThickness = 4 * SCALE
-    Scroll.ScrollBarImageColor3 = Theme.Purple
-    Scroll.ScrollBarImageTransparency = 0.2
-    Scroll.Parent = HubFrame
-
-    local UIList = Instance.new("UIListLayout")
-    UIList.Parent = Scroll
-    UIList.SortOrder = Enum.SortOrder.LayoutOrder
-    UIList.Padding = UDim.new(0, 7 * SCALE)
-
-    local UIPadding = Instance.new("UIPadding")
-    UIPadding.PaddingLeft = UDim.new(0, 8 * SCALE)
-    UIPadding.PaddingRight = UDim.new(0, 8 * SCALE)
-    UIPadding.Parent = Scroll
-
-    local function CreateSection(text)
-        local SecFrame = Instance.new("Frame")
-        SecFrame.Size = scaleUDim(250, 30)
-        SecFrame.BackgroundTransparency = 1
-        SecFrame.Parent = Scroll
-
-        local SecText = Instance.new("TextLabel")
-        SecText.Size = scaleUDim(250, 30)
-        SecText.BackgroundTransparency = 1
-        SecText.Text = text
-        SecText.TextColor3 = Theme.Accent
-        SecText.Font = Enum.Font.GothamBlack
-        SecText.TextSize = scaleSize(11)
-        SecText.TextXAlignment = Enum.TextXAlignment.Left
-        SecText.Parent = SecFrame
-
-        local secGrad = Instance.new("UIGradient")
-        secGrad.Rotation = 0
-        secGrad.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
-        })
-        secGrad.Parent = SecText
-
-        local SecLine = Instance.new("Frame")
-        SecLine.Size = UDim2.new(1, -(110 * SCALE), 0, 2)
-        SecLine.Position = UDim2.new(0, 105 * SCALE, 0.5, 0)
-        SecLine.BackgroundColor3 = Theme.Purple
-        SecLine.BackgroundTransparency = 0.4
-        SecLine.BorderSizePixel = 0
-        SecLine.Parent = SecFrame
-        Instance.new("UICorner", SecLine).CornerRadius = UDim.new(1, 0)
-
-        local lineGrad = Instance.new("UIGradient")
-        lineGrad.Rotation = 0
-        lineGrad.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 50, 255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
-        })
-        lineGrad.Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0),
-            NumberSequenceKeypoint.new(1, 0.8)
-        })
-
-        return SecFrame
+    local function corner(inst, px)
+        local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, px or 10); c.Parent = inst; return c
+    end
+    local function strokeUI(inst, color, thickness, transparency)
+        local st = Instance.new("UIStroke"); st.Color = color; st.Thickness = thickness or 1; st.Transparency = transparency or 0; st.Parent = inst; return st
+    end
+    local function pad(inst, l, r, t, b)
+        local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0,l or 0); p.PaddingRight = UDim.new(0,r or 0); p.PaddingTop = UDim.new(0,t or 0); p.PaddingBottom = UDim.new(0,b or 0); p.Parent = inst; return p
     end
 
-    local function CreateSwitch(text, default, callback)
-        local Button = Instance.new("TextButton")
-        Button.Name = text
-        Button.Size = scaleUDim(250, 44)
-        Button.BackgroundColor3 = Theme.Card
-        Button.BackgroundTransparency = 0
-        Button.Text = ""
-        Button.AutoButtonColor = false
-        Button.Parent = Scroll
-        Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 10 * SCALE)
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "SchmecktHub_UI_Red"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    gui.Parent = CoreGui
 
-        local BtnStroke = Instance.new("UIStroke")
-        BtnStroke.Color = Theme.Stroke
-        BtnStroke.Thickness = 1.5 * SCALE
-        BtnStroke.Transparency = 0.3
-        BtnStroke.Parent = Button
+    local MAIN_W = s(780)
+    local MAIN_H = s(500)
+    local SIDEBAR_W = s(200)
+    local TOPBAR_H = s(52)
+    local ROW_H = s(46)
+    local TAB_H = s(36)
+    local FONT_TITLE = s(17)
+    local FONT_DEV = s(11)
+    local FONT_LABEL = s(16)
+    local FONT_TAB = s(15)
+    local FONT_SMALL = s(14)
+    local FONT_METHOD = s(13)
+    local CORNER_R = s(14)
+    local CORNER_SM = s(12)
+    local CORNER_XS = s(10)
+    local CORNER_PILL = s(999)
+    local PAD_MAIN = s(9)
+    local PAD_INNER = s(10)
+    local PAD_CONTENT = s(14)
+    local TOGGLE_W = s(80)
+    local TOGGLE_H = s(30)
+    local BTN_CLOSE_S = s(32)
 
-        local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(1, -(70 * SCALE), 1, 0)
-        Label.Position = UDim2.new(0, 14 * SCALE, 0, 0)
-        Label.BackgroundTransparency = 1
-        Label.Text = text
-        Label.Font = Enum.Font.GothamBold
-        Label.TextSize = scaleSize(12)
-        Label.TextColor3 = Theme.Text
-        Label.TextXAlignment = Enum.TextXAlignment.Left
-        Label.Parent = Button
+    local NORMAL_SIZE = UDim2.new(0, MAIN_W, 0, MAIN_H)
 
-        local SwitchBg = Instance.new("Frame")
-        SwitchBg.Size = scaleUDim(46, 24)
-        SwitchBg.Position = UDim2.new(1, -(56 * SCALE), 0.5, -(12 * SCALE))
-        SwitchBg.BackgroundColor3 = default and Theme.Purple or Color3.fromRGB(40, 20, 30)
-        SwitchBg.BorderSizePixel = 0
-        SwitchBg.Parent = Button
-        Instance.new("UICorner", SwitchBg).CornerRadius = UDim.new(1, 0)
-        local SwitchStroke = Instance.new("UIStroke"); SwitchStroke.Color = Theme.Stroke; SwitchStroke.Thickness = 1; SwitchStroke.Parent = SwitchBg
+    local main = Instance.new("Frame")
+    main.Name = "Main"
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.Position = UDim2.new(0.5, 0, 0.5, 0)
+    main.Size = NORMAL_SIZE
+    main.BackgroundColor3 = THEME.BgMain
+    main.BorderSizePixel = 0
+    main.ZIndex = 2
+    main.Parent = gui
+    corner(main, CORNER_R)
+    strokeUI(main, THEME.Stroke1, s(2), 0)
 
-        local Circle = Instance.new("Frame")
-        Circle.Size = scaleUDim(18, 18)
-        local startX = default and (25 * SCALE) or (3 * SCALE)
-        Circle.Position = UDim2.new(0, startX, 0.5, -(9 * SCALE))
-        Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        Circle.BorderSizePixel = 0
-        Circle.Parent = SwitchBg
-        Instance.new("UICorner", Circle).CornerRadius = UDim.new(1, 0)
+    local topBar = Instance.new("Frame")
+    topBar.Name = "TopBar"
+    topBar.BackgroundColor3 = THEME.BgTop
+    topBar.BorderSizePixel = 0
+    topBar.Size = UDim2.new(1, -PAD_MAIN*2, 0, TOPBAR_H)
+    topBar.Position = UDim2.new(0, PAD_MAIN, 0, PAD_MAIN)
+    topBar.ZIndex = 3
+    topBar.Parent = main
+    corner(topBar, CORNER_R)
+    strokeUI(topBar, THEME.Stroke2, 1, 0.15)
 
-        local CircleGlow = Instance.new("UIStroke")
-        CircleGlow.Color = Theme.Purple
-        CircleGlow.Thickness = default and 2 or 0
-        CircleGlow.Transparency = 0.5
-        CircleGlow.Parent = Circle
+    local topGrad = Instance.new("UIGradient")
+    topGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(165, 0, 0)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 0)),
+    })
+    topGrad.Parent = topBar
 
-        local enabled = default
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
+    closeBtn.Size = UDim2.new(0, BTN_CLOSE_S, 0, BTN_CLOSE_S)
+    closeBtn.Position = UDim2.new(0, s(10), 0.5, -BTN_CLOSE_S/2)
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = THEME.Text
+    closeBtn.TextSize = s(14)
+    closeBtn.ZIndex = 4
+    closeBtn.Parent = topBar
+    corner(closeBtn, CORNER_XS)
 
-        local function update()
-            local targetX = enabled and (25 * SCALE) or (3 * SCALE)
-            local targetColor = enabled and Theme.Purple or Color3.fromRGB(40, 20, 30)
-            local glowThickness = enabled and 2 or 0
-            TweenService:Create(Circle, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Position = UDim2.new(0, targetX, 0.5, -(9 * SCALE))}):Play()
-            TweenService:Create(SwitchBg, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {BackgroundColor3 = targetColor}):Play()
-            TweenService:Create(CircleGlow, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Thickness = glowThickness}):Play()
-            TweenService:Create(BtnStroke, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {Color = enabled and Theme.Purple or Theme.Stroke}):Play()
+    local miniBtn = Instance.new("TextButton")
+    miniBtn.BackgroundColor3 = Color3.fromRGB(200, 55, 55)
+    miniBtn.Size = UDim2.new(0, BTN_CLOSE_S, 0, BTN_CLOSE_S)
+    miniBtn.Position = UDim2.new(0, s(10) + BTN_CLOSE_S + s(6), 0.5, -BTN_CLOSE_S/2)
+    miniBtn.Font = Enum.Font.GothamBold
+    miniBtn.Text = "-"
+    miniBtn.TextColor3 = THEME.Text
+    miniBtn.TextSize = s(18)
+    miniBtn.ZIndex = 4
+    miniBtn.Parent = topBar
+    corner(miniBtn, CORNER_XS)
+
+    local logoX = s(10) + BTN_CLOSE_S*2 + s(12) + s(6)
+    local topLogo = Instance.new("ImageLabel")
+    topLogo.BackgroundTransparency = 1
+    topLogo.Size = UDim2.new(0, s(34), 0, s(34))
+    topLogo.Position = UDim2.new(0, logoX, 0.5, -s(17))
+    topLogo.Image = INTRO_LOGO_ASSET
+    topLogo.ScaleType = Enum.ScaleType.Crop
+    topLogo.ZIndex = 4
+    topLogo.Parent = topBar
+    corner(topLogo, CORNER_PILL)
+    strokeUI(topLogo, THEME.Stroke2, 1, 0.25)
+
+    local titleX = logoX + s(34) + s(8)
+
+    local titleMain = Instance.new("TextLabel")
+    titleMain.BackgroundTransparency = 1
+    titleMain.Position = UDim2.new(0, titleX, 0, s(6))
+    titleMain.Size = UDim2.new(1, -titleX - s(10), 0, s(22))
+    titleMain.Font = Enum.Font.GothamBlack
+    titleMain.Text = "ShadowPepper Hub NEW BOIS!"
+    titleMain.TextColor3 = THEME.Text
+    titleMain.TextSize = FONT_TITLE
+    titleMain.TextXAlignment = Enum.TextXAlignment.Left
+    titleMain.TextTruncate = Enum.TextTruncate.AtEnd
+    titleMain.ZIndex = 4
+    titleMain.Parent = topBar
+
+    local titleDev = Instance.new("TextLabel")
+    titleDev.BackgroundTransparency = 1
+    titleDev.Position = UDim2.new(0, titleX, 0, s(28))
+    titleDev.Size = UDim2.new(1, -titleX - s(10), 0, s(16))
+    titleDev.Font = Enum.Font.Gotham
+    titleDev.Text = "developed by schmeckt"
+    titleDev.TextColor3 = THEME.DevText
+    titleDev.TextSize = FONT_DEV
+    titleDev.TextXAlignment = Enum.TextXAlignment.Left
+    titleDev.TextTruncate = Enum.TextTruncate.AtEnd
+    titleDev.ZIndex = 4
+    titleDev.Parent = topBar
+
+    local inner = Instance.new("Frame")
+    inner.Name = "Inner"
+    inner.BackgroundColor3 = THEME.BgInner
+    inner.BorderSizePixel = 0
+    inner.Position = UDim2.new(0, PAD_MAIN, 0, TOPBAR_H + PAD_MAIN + PAD_MAIN)
+    inner.Size = UDim2.new(1, -PAD_MAIN*2, 1, -(TOPBAR_H + PAD_MAIN*3))
+    inner.ZIndex = 2
+    inner.Parent = main
+    corner(inner, CORNER_R)
+    strokeUI(inner, THEME.Stroke2, 1, 0.2)
+
+    local sidebar = Instance.new("Frame")
+    sidebar.BackgroundColor3 = THEME.Sidebar
+    sidebar.BorderSizePixel = 0
+    sidebar.Position = UDim2.new(0, PAD_INNER, 0, PAD_INNER)
+    sidebar.Size = UDim2.new(0, SIDEBAR_W, 1, -PAD_INNER*2)
+    sidebar.ZIndex = 3
+    sidebar.Parent = inner
+    corner(sidebar, CORNER_R)
+    strokeUI(sidebar, THEME.Stroke1, 1, 0.25)
+
+    local sideInner = Instance.new("Frame")
+    sideInner.BackgroundTransparency = 1
+    sideInner.Size = UDim2.new(1, -s(16), 1, -s(16))
+    sideInner.Position = UDim2.new(0, s(8), 0, s(8))
+    sideInner.ZIndex = 4
+    sideInner.Parent = sidebar
+
+    local tabsHeader = Instance.new("TextLabel")
+    tabsHeader.BackgroundColor3 = THEME.Card2
+    tabsHeader.Size = UDim2.new(1, 0, 0, s(28))
+    tabsHeader.Font = Enum.Font.GothamSemibold
+    tabsHeader.Text = "Tabs"
+    tabsHeader.TextColor3 = THEME.Text
+    tabsHeader.TextSize = FONT_TAB
+    tabsHeader.ZIndex = 5
+    tabsHeader.Parent = sideInner
+    corner(tabsHeader, CORNER_XS)
+
+    local tabsContainer = Instance.new("Frame")
+    tabsContainer.BackgroundTransparency = 1
+    tabsContainer.Position = UDim2.new(0, 0, 0, s(36))
+    tabsContainer.Size = UDim2.new(1, 0, 1, -s(110))
+    tabsContainer.ZIndex = 5
+    tabsContainer.Parent = sideInner
+
+    local listTabs = Instance.new("UIListLayout")
+    listTabs.FillDirection = Enum.FillDirection.Vertical
+    listTabs.SortOrder = Enum.SortOrder.LayoutOrder
+    listTabs.Padding = UDim.new(0, s(6))
+    listTabs.Parent = tabsContainer
+
+    local profile = Instance.new("Frame")
+    profile.BackgroundColor3 = THEME.Card
+    profile.BorderSizePixel = 0
+    profile.Size = UDim2.new(1, 0, 0, s(60))
+    profile.Position = UDim2.new(0, 0, 1, -s(60))
+    profile.ZIndex = 5
+    profile.Parent = sideInner
+    corner(profile, CORNER_R)
+    strokeUI(profile, THEME.Stroke2, 1, 0.35)
+
+    local avatarImg = Instance.new("ImageLabel")
+    avatarImg.BackgroundTransparency = 1
+    avatarImg.Size = UDim2.new(0, s(40), 0, s(40))
+    avatarImg.Position = UDim2.new(0, s(10), 0.5, -s(20))
+    avatarImg.ZIndex = 6
+    avatarImg.Parent = profile
+    corner(avatarImg, CORNER_PILL)
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Position = UDim2.new(0, s(58), 0, s(10))
+    nameLabel.Size = UDim2.new(1, -s(66), 0, s(18))
+    nameLabel.Font = Enum.Font.GothamSemibold
+    nameLabel.TextColor3 = THEME.Text
+    nameLabel.TextSize = FONT_SMALL
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    nameLabel.ZIndex = 6
+    nameLabel.Parent = profile
+
+    local subLabel = Instance.new("TextLabel")
+    subLabel.BackgroundTransparency = 1
+    subLabel.Position = UDim2.new(0, s(58), 0, s(30))
+    subLabel.Size = UDim2.new(1, -s(66), 0, s(16))
+    subLabel.Font = Enum.Font.Gotham
+    subLabel.TextColor3 = THEME.SubText
+    subLabel.TextSize = s(12)
+    subLabel.TextXAlignment = Enum.TextXAlignment.Left
+    subLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    subLabel.ZIndex = 6
+    subLabel.Parent = profile
+
+    if lp then
+        nameLabel.Text = lp.DisplayName or lp.Name
+        subLabel.Text = "@" .. lp.Name
+        task.spawn(function()
+            local ok, img = pcall(function()
+                return Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+            end)
+            if ok and img then avatarImg.Image = img end
+        end)
+    end
+
+    local contentX = SIDEBAR_W + PAD_INNER + PAD_INNER
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Name = "Content"
+    contentFrame.BackgroundColor3 = THEME.Content
+    contentFrame.BorderSizePixel = 0
+    contentFrame.Position = UDim2.new(0, contentX, 0, PAD_INNER)
+    contentFrame.Size = UDim2.new(1, -(contentX + PAD_INNER), 1, -PAD_INNER*2)
+    contentFrame.ZIndex = 3
+    contentFrame.ClipsDescendants = true
+    contentFrame.Parent = inner
+    corner(contentFrame, CORNER_R)
+    strokeUI(contentFrame, THEME.Stroke1, 1, 0.25)
+
+    local function createSectionHeader(parent, text, order)
+        local hdr = Instance.new("TextLabel")
+        hdr.BackgroundColor3 = THEME.SectionBg
+        hdr.BorderSizePixel = 0
+        hdr.Size = UDim2.new(1, 0, 0, s(30))
+        hdr.Font = Enum.Font.GothamBold
+        hdr.Text = "  " .. text
+        hdr.TextColor3 = THEME.DimText
+        hdr.TextSize = FONT_SMALL
+        hdr.TextXAlignment = Enum.TextXAlignment.Left
+        hdr.ZIndex = 5
+        hdr.LayoutOrder = order or 0
+        hdr.Parent = parent
+        corner(hdr, s(8))
+        return hdr
+    end
+
+    local function createToggleRow(parent, text, order, defaultState, callback)
+        local row = Instance.new("Frame")
+        row.BackgroundColor3 = THEME.Card
+        row.BorderSizePixel = 0
+        row.Size = UDim2.new(1, 0, 0, ROW_H)
+        row.ZIndex = 4
+        row.LayoutOrder = order or 0
+        row.Parent = parent
+        corner(row, CORNER_SM)
+        strokeUI(row, THEME.Stroke2, 1, 0.4)
+
+        local label = Instance.new("TextLabel")
+        label.BackgroundTransparency = 1
+        label.Position = UDim2.new(0, s(16), 0, 0)
+        label.Size = UDim2.new(1, -(TOGGLE_W + s(30)), 1, 0)
+        label.Font = Enum.Font.GothamSemibold
+        label.Text = text
+        label.TextColor3 = THEME.Text
+        label.TextSize = FONT_LABEL
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextTruncate = Enum.TextTruncate.AtEnd
+        label.ZIndex = 5
+        label.Parent = row
+
+        local pill = Instance.new("TextButton")
+        pill.AutoButtonColor = false
+        pill.AnchorPoint = Vector2.new(1, 0.5)
+        pill.Position = UDim2.new(1, -s(12), 0.5, 0)
+        pill.Size = UDim2.new(0, TOGGLE_W, 0, TOGGLE_H)
+        pill.Font = Enum.Font.GothamBold
+        pill.TextSize = s(13)
+        pill.TextColor3 = THEME.Text
+        pill.ZIndex = 6
+        pill.Parent = row
+        corner(pill, CORNER_PILL)
+
+        local state = defaultState and true or false
+        local function refresh()
+            pill.BackgroundColor3 = state and THEME.ToggleOn or THEME.ToggleOff
+            pill.Text = state and "ON" or "OFF"
         end
+        refresh()
 
-        Button.MouseButton1Click:Connect(function()
-            enabled = not enabled
-            update()
-            if callback then callback(enabled) end
+        pill.MouseButton1Click:Connect(function()
+            playClick()
+            state = not state
+            refresh()
+            if callback then task.spawn(function() callback(state) end) end
             Shared.SaveConfig()
         end)
 
         local api = {}
-        function api.Set(val) enabled = val update() end
-        function api.Get() return enabled end
+        function api.Set(v) state = v and true or false; refresh() end
+        function api.Get() return state end
         return api
     end
 
-    local function CreateButton(text, callback)
-        local Wrapper = Instance.new("Frame")
-        Wrapper.BackgroundTransparency = 1
-        Wrapper.Size = scaleUDim(250, 40)
-        Wrapper.Parent = Scroll
+    local function createButtonRow(parent, text, order, callback)
+        local row = Instance.new("Frame")
+        row.BackgroundColor3 = THEME.Card
+        row.BorderSizePixel = 0
+        row.Size = UDim2.new(1, 0, 0, ROW_H)
+        row.ZIndex = 4
+        row.LayoutOrder = order or 0
+        row.Parent = parent
+        corner(row, CORNER_SM)
+        strokeUI(row, THEME.Stroke2, 1, 0.4)
 
-        local Btn = Instance.new("TextButton")
-        Btn.Size = UDim2.new(1, 0, 1, -(4 * SCALE))
-        Btn.Position = UDim2.new(0, 0, 0, 2 * SCALE)
-        Btn.BackgroundColor3 = Theme.Purple
-        Btn.BackgroundTransparency = 0.15
-        Btn.Text = text
-        Btn.TextColor3 = Theme.Text
-        Btn.Font = Enum.Font.GothamBlack
-        Btn.TextSize = scaleSize(12)
-        Btn.AutoButtonColor = false
-        Btn.Parent = Wrapper
-        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 10 * SCALE)
+        local label = Instance.new("TextLabel")
+        label.BackgroundTransparency = 1
+        label.Position = UDim2.new(0, s(16), 0, 0)
+        label.Size = UDim2.new(1, -(TOGGLE_W + s(30)), 1, 0)
+        label.Font = Enum.Font.GothamSemibold
+        label.Text = text
+        label.TextColor3 = THEME.Text
+        label.TextSize = FONT_LABEL
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextTruncate = Enum.TextTruncate.AtEnd
+        label.ZIndex = 5
+        label.Parent = row
 
-        local btnGrad = Instance.new("UIGradient")
-        btnGrad.Rotation = 45
-        btnGrad.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 20, 147)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 50, 255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 20, 60))
-        })
-        btnGrad.Parent = Btn
+        local btn = Instance.new("TextButton")
+        btn.AutoButtonColor = false
+        btn.AnchorPoint = Vector2.new(1, 0.5)
+        btn.Position = UDim2.new(1, -s(12), 0.5, 0)
+        btn.Size = UDim2.new(0, TOGGLE_W, 0, TOGGLE_H)
+        btn.BackgroundColor3 = THEME.TabIdle
+        btn.Font = Enum.Font.GothamBold
+        btn.Text = "RUN"
+        btn.TextSize = s(12)
+        btn.TextColor3 = THEME.Text
+        btn.ZIndex = 6
+        btn.Parent = row
+        corner(btn, CORNER_PILL)
+        strokeUI(btn, THEME.Stroke2, 1, 0.5)
 
-        local BtnStroke = Instance.new("UIStroke")
-        BtnStroke.Color = Theme.PurpleLight
-        BtnStroke.Thickness = 1.5
-        BtnStroke.Transparency = 0.3
-        BtnStroke.Parent = Btn
+        btn.MouseButton1Click:Connect(function()
+            playClick()
+            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = THEME.ToggleOn}):Play()
+            task.wait(0.12)
+            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = THEME.TabIdle}):Play()
+            if callback then callback() end
+        end)
+    end
 
-        Btn.MouseButton1Click:Connect(function()
-            TweenService:Create(Btn, TweenInfo.new(0.1), {Size = UDim2.new(0.95, 0, 0.9, 0)}):Play()
-            task.wait(0.1)
-            TweenService:Create(Btn, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 1, -(4 * SCALE))}):Play()
-            if callback then callback(Btn) end
+    local function createWarnLabel(parent, order)
+        local wl = Instance.new("TextLabel")
+        wl.BackgroundColor3 = THEME.Card
+        wl.BackgroundTransparency = 0
+        wl.Size = UDim2.new(1, 0, 0, s(24))
+        wl.Font = Enum.Font.GothamBold
+        wl.TextColor3 = THEME.Warn
+        wl.TextSize = FONT_SMALL
+        wl.Text = ""
+        wl.Visible = false
+        wl.ZIndex = 5
+        wl.LayoutOrder = order or 0
+        wl.Parent = parent
+        corner(wl, s(8))
+        return wl
+    end
+
+    local function createTabPage(titleText)
+        local page = Instance.new("ScrollingFrame")
+        page.BackgroundTransparency = 1
+        page.Size = UDim2.new(1, 0, 1, 0)
+        page.Visible = false
+        page.ZIndex = 3
+        page.ScrollBarThickness = s(3)
+        page.ScrollBarImageColor3 = THEME.Stroke1
+        page.CanvasSize = UDim2.new(0, 0, 0, 0)
+        page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        page.Parent = contentFrame
+
+        pad(page, PAD_CONTENT, PAD_CONTENT, PAD_CONTENT, PAD_CONTENT)
+
+        local layout = Instance.new("UIListLayout")
+        layout.FillDirection = Enum.FillDirection.Vertical
+        layout.SortOrder = Enum.SortOrder.LayoutOrder
+        layout.Padding = UDim.new(0, s(8))
+        layout.Parent = page
+
+        local header = Instance.new("TextLabel")
+        header.BackgroundColor3 = THEME.Card2
+        header.BorderSizePixel = 0
+        header.Size = UDim2.new(1, 0, 0, s(38))
+        header.Font = Enum.Font.GothamBold
+        header.Text = "  " .. titleText
+        header.TextColor3 = THEME.Text
+        header.TextSize = FONT_LABEL
+        header.TextXAlignment = Enum.TextXAlignment.Left
+        header.ZIndex = 4
+        header.LayoutOrder = 0
+        header.Parent = page
+        corner(header, CORNER_SM)
+        strokeUI(header, THEME.Stroke2, 1, 0.35)
+
+        return page
+    end
+
+    local function createEmptyTabPage()
+        local page = Instance.new("ScrollingFrame")
+        page.BackgroundTransparency = 1
+        page.Size = UDim2.new(1, 0, 1, 0)
+        page.Visible = false
+        page.ZIndex = 3
+        page.ScrollBarThickness = s(3)
+        page.ScrollBarImageColor3 = THEME.Stroke1
+        page.CanvasSize = UDim2.new(0, 0, 0, 0)
+        page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        page.Parent = contentFrame
+        return page
+    end
+
+    local tabs = {
+        { id = "Replication", text = "Replication" },
+        { id = "Hitters",     text = "Hitters" },
+        { id = "Visuals",     text = "Visuals" },
+        { id = "Target",      text = "Target" },
+        { id = "Helper",      text = "Helper" },
+        { id = "Settings",    text = "Settings" },
+    }
+
+    local tabButtons = {}
+    local tabPages = {}
+
+    for i, t in ipairs(tabs) do
+        local btn = Instance.new("TextButton")
+        btn.Name = t.id .. "_Tab"
+        btn.BackgroundColor3 = THEME.TabIdle
+        btn.BorderSizePixel = 0
+        btn.Size = UDim2.new(1, 0, 0, TAB_H)
+        btn.Font = Enum.Font.GothamSemibold
+        btn.Text = "  " .. t.text
+        btn.TextColor3 = THEME.Text
+        btn.TextSize = FONT_TAB
+        btn.TextXAlignment = Enum.TextXAlignment.Left
+        btn.LayoutOrder = i
+        btn.ZIndex = 5
+        btn.Parent = tabsContainer
+        corner(btn, CORNER_SM)
+        tabButtons[t.id] = btn
+        if t.id == "Target" then
+            tabPages[t.id] = createEmptyTabPage()
+            Shared.TargetTabContainer = tabPages[t.id]
+        elseif t.id == "Visuals" then
+            tabPages[t.id] = createEmptyTabPage()
+            Shared.VisualsTabContainer = tabPages[t.id]
+        else
+            tabPages[t.id] = createTabPage(t.text)
+        end
+    end
+
+    do
+        local p = tabPages["Replication"]
+        local sVer = Instance.new("TextLabel")
+        sVer.BackgroundColor3 = THEME.Card
+        sVer.Size = UDim2.new(1, 0, 0, ROW_H)
+        sVer.Font = Enum.Font.GothamSemibold
+        sVer.TextColor3 = THEME.Text
+        sVer.TextSize = FONT_SMALL
+        sVer.ZIndex = 4
+        sVer.LayoutOrder = 1
+        sVer.Parent = p
+        corner(sVer, CORNER_SM)
+        strokeUI(sVer, THEME.Stroke2, 1, 0.35)
+
+        local platformInfo = Instance.new("TextLabel")
+        platformInfo.BackgroundColor3 = THEME.Card
+        platformInfo.Size = UDim2.new(1, 0, 0, ROW_H)
+        platformInfo.Font = Enum.Font.GothamSemibold
+        platformInfo.TextColor3 = THEME.SubText
+        platformInfo.TextSize = FONT_SMALL
+        platformInfo.Text = "  Platform: " .. Shared.Platform
+        platformInfo.ZIndex = 4
+        platformInfo.LayoutOrder = 2
+        platformInfo.Parent = p
+        corner(platformInfo, CORNER_SM)
+        strokeUI(platformInfo, THEME.Stroke2, 1, 0.4)
+
+        task.spawn(function()
+            while p.Parent do
+                local ping = 0
+                pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
+                sVer.Text = "  Server v" .. game.PlaceVersion .. "  |  Ping: " .. ping .. "ms  |  Runs: " .. Shared.TotalExecutions
+                task.wait(1)
+            end
+        end)
+    end
+
+    do
+        local p = tabPages["Hitters"]
+        createSectionHeader(p, "SILENT AIM", 1)
+
+        local aimWarn = createWarnLabel(p, 2)
+
+        local function FlashAimWarn(txt)
+            aimWarn.Text = "  " .. txt
+            aimWarn.Visible = true
+            task.delay(2.5, function() if aimWarn and aimWarn.Parent then aimWarn.Visible = false end end)
+        end
+
+        local AimSwitch
+        AimSwitch = createToggleRow(p, "Silent Aim", 3, Shared.SilentAim, function(on)
+            if on then
+                if not Shared.SilentAimMethod then
+                    FlashAimWarn("Select a method below first!")
+                    Shared.SilentAim = false
+                    AimSwitch.Set(false)
+                    return
+                end
+                if Shared.Platform == "PC" and Shared.SilentAimMethod == "MobileMethod" then
+                    FlashAimWarn("Mobile Method not available on PC!")
+                    Shared.SilentAim = false
+                    AimSwitch.Set(false)
+                    return
+                end
+                if Shared.Platform == "Mobile" and (Shared.SilentAimMethod == "FOV" or Shared.SilentAimMethod == "QMethod") then
+                    FlashAimWarn("PC Method not available on Mobile!")
+                    Shared.SilentAim = false
+                    AimSwitch.Set(false)
+                    return
+                end
+                EnableSilentAimFlags()
+                Load_SilentAim_ByMethod()
+            else
+                Stop_SilentAim_All()
+            end
         end)
 
-        return Btn
-    end
+        createSectionHeader(p, "SELECT METHOD", 4)
 
-    CreateSection("MAIN SETTINGS")
-    CreateSwitch("Auto Armor", Shared.AutoArmor, function(s) Shared.AutoArmor = s if s then Load_AutoArmor() end end)
-    CreateSwitch("Staff Notifier", Shared.StaffNotifier, function(s) Shared.StaffNotifier = s if s then Load_StaffNotifier() else Stop_StaffNotifier() end end)
-    CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) Shared.PlayerPanel = s if s then Load_PlayerPanel() else Stop_PlayerPanel() end end)
-    CreateSwitch("Target Panel", Shared.TargetPanel, function(s) Shared.TargetPanel = s if s then Load_Target() else Stop_TargetPanel() end end)
-    CreateSwitch("Visual Panel", Shared.VisualPanel, function(s) Shared.VisualPanel = s if s then Load_VisualPanel() else Stop_VisualPanel() end end)
-    CreateSwitch("Purchase Panel", Shared.PurchasePanel, function(s) Shared.PurchasePanel = s if s then Load_PurchasePanel() else Stop_PurchasePanel() end end)
-    CreateSwitch("Anti Fling", Shared.AntiFling, function(s) Shared.AntiFling = s if s then Load_AntiFling() end end)
-    CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s) Shared.InstantStomp = s if s then Load_InstantStomp() else Stop_InstantStomp() end end)
-    CreateSwitch("Auto Reload", Shared.AutoReload, function(s) Shared.AutoReload = s if s then Load_AutoReload_S() end end)
+        local isPCMode = Shared.Platform == "PC"
 
-    CreateSection("COMBAT / AIM")
+        local methodRow = Instance.new("Frame")
+        methodRow.BackgroundColor3 = THEME.SectionBg
+        methodRow.BorderSizePixel = 0
+        methodRow.Size = UDim2.new(1, 0, 0, s(50))
+        methodRow.ZIndex = 4
+        methodRow.LayoutOrder = 5
+        methodRow.Parent = p
+        corner(methodRow, CORNER_SM)
 
-    local AimWarnLabel = Instance.new("TextLabel")
-    AimWarnLabel.Size = scaleUDim(250, 22)
-    AimWarnLabel.BackgroundColor3 = Theme.Card
-    AimWarnLabel.BackgroundTransparency = 0
-    AimWarnLabel.Text = ""
-    AimWarnLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-    AimWarnLabel.Font = Enum.Font.GothamBold
-    AimWarnLabel.TextSize = scaleSize(10)
-    AimWarnLabel.Visible = false
-    AimWarnLabel.Parent = Scroll
-    Instance.new("UICorner", AimWarnLabel).CornerRadius = UDim.new(0, 8 * SCALE)
+        local selectedMethodId = Shared.SilentAimMethod
 
-    local function FlashAimWarn(txt)
-        AimWarnLabel.Text = txt
-        AimWarnLabel.Visible = true
-        task.delay(2.5, function() if AimWarnLabel then AimWarnLabel.Visible = false end end)
-    end
+        local methodBtns = {}
+        local methodStrokes = {}
 
-    local AimSwitch
-    AimSwitch = CreateSwitch("Silent Aim", Shared.SilentAim, function(s)
-        if s then
-            if not Shared.SilentAimMethod then
-                FlashAimWarn("Select a method below first!")
-                Shared.SilentAim = false
-                AimSwitch.Set(false)
-                return
+        local methodList
+        if isPCMode then
+            methodList = {
+                {id = "FOV", label = "FOV Method"},
+                {id = "QMethod", label = "Q Method"},
+            }
+        else
+            methodList = {
+                {id = "MobileMethod", label = "Mobile Method"},
+            }
+        end
+
+        local btnCount = #methodList
+        local btnW = math.floor((1 / btnCount) * 100) / 100
+
+        for i, m in ipairs(methodList) do
+            local b = Instance.new("TextButton")
+            b.Name = "Method_" .. m.id
+            b.AutoButtonColor = false
+            b.Size = UDim2.new(btnW, -s(12), 0, s(36))
+            b.Position = UDim2.new(btnW * (i - 1), s(6), 0.5, -s(18))
+            b.Font = Enum.Font.GothamBold
+            b.Text = m.label
+            b.TextSize = FONT_METHOD
+            b.ZIndex = 6
+            b.Parent = methodRow
+            corner(b, CORNER_XS)
+
+            local bStroke = strokeUI(b, COL_STROKE_OFF, s(2), 0)
+            methodBtns[m.id] = b
+            methodStrokes[m.id] = bStroke
+
+            if m.id == selectedMethodId then
+                b.BackgroundColor3 = COL_ON
+                b.TextColor3 = COL_TEXT_ON
+                bStroke.Color = COL_STROKE_ON
+            else
+                b.BackgroundColor3 = COL_OFF
+                b.TextColor3 = COL_TEXT_OFF
+                bStroke.Color = COL_STROKE_OFF
             end
-            if Shared.Platform == "PC" and Shared.SilentAimMethod == "MobileMethod" then
-                FlashAimWarn("Mobile Method not available on PC!")
-                Shared.SilentAim = false
-                AimSwitch.Set(false)
-                return
+        end
+
+        local function updateMethodVisuals(activeId)
+            for id, b in pairs(methodBtns) do
+                local isOn = (id == activeId)
+                b.BackgroundColor3 = isOn and COL_ON or COL_OFF
+                b.TextColor3 = isOn and COL_TEXT_ON or COL_TEXT_OFF
+                if methodStrokes[id] then
+                    methodStrokes[id].Color = isOn and COL_STROKE_ON or COL_STROKE_OFF
+                end
             end
-            EnableSilentAimFlags()
-            Load_SilentAim_ByMethod()
-        else
-            Stop_SilentAim_All()
         end
-    end)
 
-    local SilentAimMethodRow = Instance.new("Frame")
-    SilentAimMethodRow.BackgroundTransparency = 1
-    SilentAimMethodRow.Size = scaleUDim(250, 40)
-    SilentAimMethodRow.Parent = Scroll
+        for i, m in ipairs(methodList) do
+            methodBtns[m.id].MouseButton1Click:Connect(function()
+                playClick()
+                if Shared.SilentAimMethod == m.id then return end
+                local wasOn = Shared.SilentAim
+                if wasOn then
+                    CleanupSilentAim()
+                    task.wait(0.15)
+                end
+                Shared.SilentAimMethod = m.id
+                selectedMethodId = m.id
+                updateMethodVisuals(m.id)
+                Shared.SaveConfig()
+                if wasOn then
+                    Shared.SilentAim = true
+                    EnableSilentAimFlags()
+                    Load_SilentAim_ByMethod()
+                end
+            end)
+        end
 
-    local FOVBtn = Instance.new("TextButton")
-    FOVBtn.Size = UDim2.new(0.48, 0, 1, -(4 * SCALE))
-    FOVBtn.Position = UDim2.new(0, 0, 0, 2 * SCALE)
-    FOVBtn.BackgroundColor3 = Theme.Card
-    FOVBtn.Text = "FOV Method"
-    FOVBtn.TextColor3 = Theme.Text
-    FOVBtn.Font = Enum.Font.GothamBold
-    FOVBtn.TextSize = scaleSize(10)
-    FOVBtn.AutoButtonColor = false
-    FOVBtn.Parent = SilentAimMethodRow
-    Instance.new("UICorner", FOVBtn).CornerRadius = UDim.new(0, 8 * SCALE)
-    local FOVStroke = Instance.new("UIStroke"); FOVStroke.Color = Theme.Stroke; FOVStroke.Thickness = 1.5; FOVStroke.Parent = FOVBtn
+        createSectionHeader(p, "AIMING", 10)
 
-    local QBtn = Instance.new("TextButton")
-    QBtn.Size = UDim2.new(0.48, 0, 1, -(4 * SCALE))
-    QBtn.Position = UDim2.new(0.52, 0, 0, 2 * SCALE)
-    QBtn.BackgroundColor3 = Theme.Card
-    QBtn.Text = "Q Method"
-    QBtn.TextColor3 = Theme.Text
-    QBtn.Font = Enum.Font.GothamBold
-    QBtn.TextSize = scaleSize(10)
-    QBtn.AutoButtonColor = false
-    QBtn.Parent = SilentAimMethodRow
-    Instance.new("UICorner", QBtn).CornerRadius = UDim.new(0, 8 * SCALE)
-    local QStroke = Instance.new("UIStroke"); QStroke.Color = Theme.Stroke; QStroke.Thickness = 1.5; QStroke.Parent = QBtn
+        createToggleRow(p, "Camlock", 11, Shared.Camlock, function(on)
+            Shared.Camlock = on
+            if on then
+                if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
+            else
+                Stop_Camlock_PC()
+                Stop_Camlock_Mobile()
+            end
+        end)
 
-    local MobileBtn = Instance.new("TextButton")
-    MobileBtn.Size = UDim2.new(1, 0, 1, -(4 * SCALE))
-    MobileBtn.Position = UDim2.new(0, 0, 0, 2 * SCALE)
-    MobileBtn.BackgroundColor3 = Theme.Card
-    MobileBtn.Text = "Mobile Method"
-    MobileBtn.TextColor3 = Theme.Text
-    MobileBtn.Font = Enum.Font.GothamBold
-    MobileBtn.TextSize = scaleSize(10)
-    MobileBtn.AutoButtonColor = false
-    MobileBtn.Parent = SilentAimMethodRow
-    Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(0, 8 * SCALE)
-    local MobStroke = Instance.new("UIStroke"); MobStroke.Color = Theme.Stroke; MobStroke.Thickness = 1.5; MobStroke.Parent = MobileBtn
+        createToggleRow(p, "TriggerBot", 12, Shared.TriggerBot, function(on)
+            Shared.TriggerBot = on
+            if on then Load_TriggerBot() end
+        end)
 
-    local function updateMethodButtons()
-        FOVBtn.BackgroundColor3 = (Shared.SilentAimMethod == "FOV") and Theme.Purple or Theme.Card
-        QBtn.BackgroundColor3 = (Shared.SilentAimMethod == "QMethod") and Theme.Purple or Theme.Card
-        MobileBtn.BackgroundColor3 = (Shared.SilentAimMethod == "MobileMethod") and Theme.Purple or Theme.Card
-        FOVStroke.Color = (Shared.SilentAimMethod == "FOV") and Theme.PurpleLight or Theme.Stroke
-        QStroke.Color = (Shared.SilentAimMethod == "QMethod") and Theme.PurpleLight or Theme.Stroke
-        MobStroke.Color = (Shared.SilentAimMethod == "MobileMethod") and Theme.PurpleLight or Theme.Stroke
-        if Shared.Platform == "PC" then
-            FOVBtn.Visible = true
-            QBtn.Visible = true
-            MobileBtn.Visible = false
-        else
-            FOVBtn.Visible = false
-            QBtn.Visible = false
-            MobileBtn.Visible = true
+        createSectionHeader(p, "COMBAT", 20)
+
+        createToggleRow(p, "Drag Shoot", 21, Shared.DragShoot, function(on)
+            Shared.DragShoot = on
+            if on then Load_DragShoot() end
+        end)
+    end
+
+    do
+        local p = tabPages["Helper"]
+        createSectionHeader(p, "AUTOMATION", 1)
+
+        createToggleRow(p, "Auto Armor", 2, Shared.AutoArmor, function(on)
+            Shared.AutoArmor = on
+            if on then Load_AutoArmor() end
+        end)
+        createToggleRow(p, "Auto Reload", 3, Shared.AutoReload, function(on)
+            Shared.AutoReload = on
+            if on then Load_AutoReload_S() end
+        end)
+
+        createSectionHeader(p, "PROTECTION", 10)
+
+        createToggleRow(p, "Anti Fling", 11, Shared.AntiFling, function(on)
+            Shared.AntiFling = on
+            if on then Load_AntiFling() end
+        end)
+        createToggleRow(p, "Instant Stomp", 12, Shared.InstantStomp, function(on)
+            Shared.InstantStomp = on
+            if on then Load_InstantStomp() else Stop_InstantStomp() end
+        end)
+
+        createSectionHeader(p, "PANELS", 20)
+
+        createToggleRow(p, "Player Panel", 21, Shared.PlayerPanel, function(on)
+            Shared.PlayerPanel = on
+            if on then Load_PlayerPanel() else Stop_PlayerPanel() end
+        end)
+
+        createToggleRow(p, "Purchase Panel", 22, Shared.PurchasePanel, function(on)
+            Shared.PurchasePanel = on
+            if on then Load_PurchasePanel() else Stop_PurchasePanel() end
+        end)
+        createToggleRow(p, "Staff Notifier", 23, Shared.StaffNotifier, function(on)
+            Shared.StaffNotifier = on
+            if on then Load_StaffNotifier() else Stop_StaffNotifier() end
+        end)
+    end
+
+    do
+        local p = tabPages["Settings"]
+        createSectionHeader(p, "SCRIPT CONTROL", 1)
+
+        createButtonRow(p, "Restart Script", 2, function()
+            Shared.SaveConfig()
+            gui:Destroy()
+            ReloadAllScripts()
+            task.wait(0.3)
+            CreateUI()
+            task.wait(0.2)
+            Load_Target()
+            Load_Visual()
+        end)
+        createButtonRow(p, "Unload / Close", 3, function()
+            DisableAllScripts()
+            Shared.SaveConfig()
+            gui:Destroy()
+        end)
+
+        createSectionHeader(p, "PLATFORM", 10)
+
+        local platWarn = createWarnLabel(p, 11)
+
+        createButtonRow(p, "Switch to PC", 12, function()
+            if Shared.Platform == "PC" then return end
+            if Shared.SilentAim then Stop_SilentAim_All() end
+            Shared.SilentAimMethod = nil
+            Shared.Platform = "PC"
+            platWarn.Text = "  Switched to PC - Restart to apply"
+            platWarn.Visible = true
+            Shared.SaveConfig()
+        end)
+        createButtonRow(p, "Switch to Mobile", 13, function()
+            if Shared.Platform == "Mobile" then return end
+            if Shared.SilentAim then Stop_SilentAim_All() end
+            Shared.SilentAimMethod = nil
+            Shared.Platform = "Mobile"
+            platWarn.Text = "  Switched to Mobile - Restart to apply"
+            platWarn.Visible = true
+            Shared.SaveConfig()
+        end)
+    end
+
+    local currentTab = "Replication"
+    local function switchTab(id)
+        if id == currentTab then return end
+        currentTab = id
+        playClick()
+        for k, page in pairs(tabPages) do page.Visible = (k == id) end
+        for k, btn in pairs(tabButtons) do
+            TweenService:Create(btn, TweenInfo.new(0.15), {
+                BackgroundColor3 = (k == id) and THEME.TabActive or THEME.TabIdle
+            }):Play()
         end
     end
 
-    FOVBtn.MouseButton1Click:Connect(function()
-        if Shared.Platform ~= "PC" then return end
-        if Shared.SilentAimMethod == "FOV" then return end
-        CleanupSilentAim()
-        task.wait(0.15)
-        Shared.SilentAimMethod = "FOV"
-        updateMethodButtons()
-        Shared.SaveConfig()
-        if Shared.SilentAim then EnableSilentAimFlags() Load_SilentAim_ByMethod() end
-    end)
-
-    QBtn.MouseButton1Click:Connect(function()
-        if Shared.Platform ~= "PC" then return end
-        if Shared.SilentAimMethod == "QMethod" then return end
-        CleanupSilentAim()
-        task.wait(0.15)
-        Shared.SilentAimMethod = "QMethod"
-        updateMethodButtons()
-        Shared.SaveConfig()
-        if Shared.SilentAim then EnableSilentAimFlags() Load_SilentAim_ByMethod() end
-    end)
-
-    MobileBtn.MouseButton1Click:Connect(function()
-        if Shared.Platform ~= "Mobile" then return end
-        if Shared.SilentAimMethod == "MobileMethod" then return end
-        CleanupSilentAim()
-        task.wait(0.15)
-        Shared.SilentAimMethod = "MobileMethod"
-        updateMethodButtons()
-        Shared.SaveConfig()
-        if Shared.SilentAim then EnableSilentAimFlags() Load_SilentAim_ByMethod() end
-    end)
-
-    CreateSwitch("Camlock", Shared.Camlock, function(s)
-        Shared.Camlock = s
-        if s then
-            if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
-        else
-            Stop_Camlock_PC()
-            Stop_Camlock_Mobile()
-        end
-    end)
-
-    CreateSwitch("Triggerbot", Shared.TriggerBot, function(s) Shared.TriggerBot = s if s then Load_TriggerBot() end end)
-    CreateSwitch("Drag Shoot", Shared.DragShoot, function(s) Shared.DragShoot = s if s then Load_DragShoot() end end)
-
-    CreateSection("SYSTEM")
-
-    local PlatRow = Instance.new("Frame")
-    PlatRow.BackgroundTransparency = 1
-    PlatRow.Size = scaleUDim(250, 40)
-    PlatRow.Parent = Scroll
-
-    local PCBtn = Instance.new("TextButton")
-    PCBtn.Size = UDim2.new(0.48, 0, 1, -(4 * SCALE))
-    PCBtn.Position = UDim2.new(0, 0, 0, 2 * SCALE)
-    PCBtn.BackgroundColor3 = (Shared.Platform == "PC") and Theme.Purple or Theme.Card
-    PCBtn.Text = "PC"
-    PCBtn.TextColor3 = Theme.Text
-    PCBtn.Font = Enum.Font.GothamBlack
-    PCBtn.TextSize = scaleSize(12)
-    PCBtn.AutoButtonColor = false
-    PCBtn.Parent = PlatRow
-    Instance.new("UICorner", PCBtn).CornerRadius = UDim.new(0, 8 * SCALE)
-    local PCStroke = Instance.new("UIStroke"); PCStroke.Color = (Shared.Platform == "PC") and Theme.PurpleLight or Theme.Stroke; PCStroke.Thickness = 1.5; PCStroke.Parent = PCBtn
-
-    local MobBtn = Instance.new("TextButton")
-    MobBtn.Size = UDim2.new(0.48, 0, 1, -(4 * SCALE))
-    MobBtn.Position = UDim2.new(0.52, 0, 0, 2 * SCALE)
-    MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.Purple or Theme.Card
-    MobBtn.Text = "Mobile"
-    MobBtn.TextColor3 = Theme.Text
-    MobBtn.Font = Enum.Font.GothamBlack
-    MobBtn.TextSize = scaleSize(12)
-    MobBtn.AutoButtonColor = false
-    MobBtn.Parent = PlatRow
-    Instance.new("UICorner", MobBtn).CornerRadius = UDim.new(0, 8 * SCALE)
-    local MobStroke2 = Instance.new("UIStroke"); MobStroke2.Color = (Shared.Platform == "Mobile") and Theme.PurpleLight or Theme.Stroke; MobStroke2.Thickness = 1.5; MobStroke2.Parent = MobBtn
-
-    local RestartLabel = Instance.new("TextLabel")
-    RestartLabel.Size = scaleUDim(250, 24)
-    RestartLabel.BackgroundColor3 = Theme.Card
-    RestartLabel.BackgroundTransparency = 0.3
-    RestartLabel.Text = "Click Restart to apply"
-    RestartLabel.TextColor3 = Theme.Purple
-    RestartLabel.Font = Enum.Font.GothamBold
-    RestartLabel.TextSize = scaleSize(10)
-    RestartLabel.Visible = false
-    RestartLabel.Parent = Scroll
-    Instance.new("UICorner", RestartLabel).CornerRadius = UDim.new(0, 8 * SCALE)
-
-    local function updatePlatBtns()
-        PCBtn.BackgroundColor3 = (Shared.Platform == "PC") and Theme.Purple or Theme.Card
-        MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.Purple or Theme.Card
-        PCStroke.Color = (Shared.Platform == "PC") and Theme.PurpleLight or Theme.Stroke
-        MobStroke2.Color = (Shared.Platform == "Mobile") and Theme.PurpleLight or Theme.Stroke
-        SubTitle.Text = Shared.Platform .. " Edition | developed by schmeckt"
-        RestartLabel.Visible = true
-        if Shared.SilentAim then
-            Stop_SilentAim_All()
-            AimSwitch.Set(false)
-        end
-        Shared.SilentAimMethod = nil
-        updateMethodButtons()
-        Shared.SaveConfig()
+    for id, btn in pairs(tabButtons) do
+        btn.MouseButton1Click:Connect(function() switchTab(id) end)
+    end
+    tabPages["Replication"].Visible = true
+    for k, btn in pairs(tabButtons) do
+        btn.BackgroundColor3 = (k == "Replication") and THEME.TabActive or THEME.TabIdle
     end
 
-    PCBtn.MouseButton1Click:Connect(function() Shared.Platform = "PC" updatePlatBtns() end)
-    MobBtn.MouseButton1Click:Connect(function() Shared.Platform = "Mobile" updatePlatBtns() end)
+    do
+        local dragging, dragInput, dragStart, startPos
+        topBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                startPos = main.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then dragging = false end
+                end)
+            end
+        end)
+        topBar.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if input == dragInput and dragging then
+                local delta = input.Position - dragStart
+                main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+    end
 
-    CreateButton("Close GUI", function() DisableAllScripts(); Shared.SaveConfig(); ScreenGui:Destroy() end)
-    CreateButton("Restart GUI", function()
-        ScreenGui:Destroy();
-        Shared.SaveConfig();
-        ReloadAllScripts();
-        MainUI()
-    end)
-
-    local UIList2 = Scroll:FindFirstChildOfClass("UIListLayout")
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (70 * SCALE))
-    UIList2:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        Scroll.CanvasSize = UDim2.new(0, 0, 0, UIList2.AbsoluteContentSize.Y + (70 * SCALE))
-    end)
-
-    local draggingHub, dragInputHub, dragStartHub, startPosHub
-    HubFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingHub = true
-            dragStartHub = input.Position
-            startPosHub = HubFrame.Position
-        end
-    end)
-    HubFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInputHub = input
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInputHub and draggingHub then
-            local delta = input.Position - dragStartHub
-            HubFrame.Position = UDim2.new(startPosHub.X.Scale, startPosHub.X.Offset + delta.X, startPosHub.Y.Scale, startPosHub.Y.Offset + delta.Y)
-            HubFrameShadow.Position = UDim2.new(startPosHub.X.Scale, startPosHub.X.Offset + delta.X - (5 * SCALE), startPosHub.Y.Scale, startPosHub.Y.Offset + delta.Y - (5 * SCALE))
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingHub = false
-        end
-    end)
-
-    local draggingBar, dragInputBar, dragStartBar, startPosBar
-    BottomBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingBar = true
-            dragStartBar = input.Position
-            startPosBar = BottomBar.Position
-        end
-    end)
-    BottomBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInputBar = input
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInputBar and draggingBar then
-            local delta = input.Position - dragStartBar
-            BottomBar.Position = UDim2.new(startPosBar.X.Scale, startPosBar.X.Offset + delta.X, startPosBar.Y.Scale, startPosBar.Y.Offset + delta.Y)
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingBar = false
+    local minimized = false
+    miniBtn.MouseButton1Click:Connect(function()
+        playClick()
+        minimized = not minimized
+        if minimized then
+            inner.Visible = false
+            TweenService:Create(main, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = UDim2.new(0, MAIN_W, 0, TOPBAR_H + PAD_MAIN*2 + s(4))
+            }):Play()
+        else
+            TweenService:Create(main, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+                Size = NORMAL_SIZE
+            }):Play()
+            task.delay(0.2, function() inner.Visible = true end)
         end
     end)
 
-    updateMethodButtons()
+    closeBtn.MouseButton1Click:Connect(function()
+        playClick()
+        gui:Destroy()
+    end)
+
+    main.Size = UDim2.new(0, 0, 0, 0)
+    main.Rotation = -8
+    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = NORMAL_SIZE, Rotation = 0
+    }):Play()
 end
 
-MainUI()
+CreateUI()
 Load_ShadowPepperUsers()
+
+task.wait(0.3)
+Load_Target()
+Load_Visual()
 
 task.defer(function()
     if Shared.InstantStomp then Load_InstantStomp() end
@@ -1146,8 +1234,6 @@ task.defer(function()
     if Shared.TriggerBot then Load_TriggerBot() end
     if Shared.StaffNotifier then Load_StaffNotifier() end
     if Shared.PlayerPanel then Load_PlayerPanel() end
-    if Shared.TargetPanel then Load_Target() end
-    if Shared.VisualPanel then Load_VisualPanel() end
     if Shared.PurchasePanel then Load_PurchasePanel() end
     if Shared.Camlock then
         if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
