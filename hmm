@@ -28,6 +28,8 @@ Shared.DragShoot = Shared.DragShoot or false
 Shared.TargetPanel = Shared.TargetPanel or false
 Shared.InstantStomp = Shared.InstantStomp or false
 Shared.AntiFling = Shared.AntiFling or false
+Shared.VisualPanel = Shared.VisualPanel or false
+Shared.PurchasePanel = Shared.PurchasePanel or false
 Shared.Platform = Shared.Platform or "PC"
 Shared.Connections = Shared.Connections or {}
 Shared.ShadowPepperUsers = Shared.ShadowPepperUsers or {}
@@ -52,6 +54,8 @@ local function serializeConfig()
             TargetPanel = Shared.TargetPanel,
             InstantStomp = Shared.InstantStomp,
             AntiFling = Shared.AntiFling,
+            VisualPanel = Shared.VisualPanel,
+            PurchasePanel = Shared.PurchasePanel,
         }
     }
 end
@@ -121,6 +125,33 @@ local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/main/teats") end
 local function Load_AntiFling() safeLoad("https://raw.githubusercontent.com/judos887o/ANTI-FL/main/te") end
 local function Load_ShadowPepperUsers() safeLoad("https://raw.githubusercontent.com/judos887o/user/refs/heads/main/a") end
+local function Load_VisualPanel() safeLoad("https://raw.githubusercontent.com/judos887o/visual-panel-/refs/heads/main/a") end
+local function Load_PurchasePanel() safeLoad("https://raw.githubusercontent.com/judos887o/purchased/refs/heads/main/a") end
+
+local function Stop_PurchasePanel()
+    local S = getgenv().SchmecktHubPC
+    if S and S.Connections and S.Connections["PurchasePanel"] then
+        for _, c in pairs(S.Connections["PurchasePanel"]) do pcall(function() c:Disconnect() end) end
+        S.Connections["PurchasePanel"] = nil
+    end
+    local g = CoreGui:FindFirstChild("SchmecktPurchasePanel") if g then g:Destroy() end
+end
+
+local function Stop_VisualPanel()
+    local S = getgenv().SchmecktHubPC
+    if S and S.Connections and S.Connections["SchmecktESP"] then
+        for _, c in pairs(S.Connections["SchmecktESP"]) do pcall(function() c:Disconnect() end) end
+        S.Connections["SchmecktESP"] = nil
+    end
+    local g = CoreGui:FindFirstChild("SchmecktESPPanel") if g then g:Destroy() end
+    local o = CoreGui:FindFirstChild("SchmecktESPOverlay") if o then o:Destroy() end
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr.Character then
+            local hl = plr.Character:FindFirstChild("SchmecktHighlight")
+            if hl then hl:Destroy() end
+        end
+    end
+end
 
 local function Stop_InstantStomp()
     local S = getgenv().SchmecktHubPC
@@ -135,6 +166,8 @@ local function Stop_InstantStomp()
     if lp and lp:FindFirstChild("PlayerGui") then
         local pgUI = lp.PlayerGui:FindFirstChild("Schmeckt_InstantStomp_UI")
         if pgUI then pgUI:Destroy() end
+        local isGui = lp.PlayerGui:FindFirstChild("InstantStompGui")
+        if isGui then isGui:Destroy() end
     end
     local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring") if ring then ring:Destroy() end
 end
@@ -157,7 +190,7 @@ local function Stop_PlayerPanel()
         for _, c in pairs(S.Connections["PlayerPanel"]) do pcall(function() c:Disconnect() end) end
         S.Connections["PlayerPanel"] = nil
     end
-    local g = CoreGui:FindFirstChild("SchmecktPlayerPanel") 
+    local g = CoreGui:FindFirstChild("SchmecktPlayerPanel")
     if g then g:Destroy() end
 end
 
@@ -283,6 +316,8 @@ local function DisableAllScripts()
     Shared.TargetPanel = false
     Shared.InstantStomp = false
     Shared.AntiFling = false
+    Shared.VisualPanel = false
+    Shared.PurchasePanel = false
     Stop_InstantStomp()
     Stop_SilentAim_All()
     Stop_Camlock_PC()
@@ -291,6 +326,8 @@ local function DisableAllScripts()
     Stop_TargetPanel()
     Stop_PlayerPanel()
     Stop_StaffNotifier()
+    Stop_VisualPanel()
+    Stop_PurchasePanel()
 end
 
 local function ReloadAllScripts()
@@ -301,9 +338,9 @@ local function ReloadAllScripts()
     Stop_TargetPanel()
     Stop_PlayerPanel()
     Stop_StaffNotifier()
-    
+    Stop_VisualPanel()
+    Stop_PurchasePanel()
     task.wait(0.2)
-    
     if Shared.InstantStomp then Load_InstantStomp() end
     if Shared.AutoArmor then Load_AutoArmor() end
     if Shared.StaffNotifier then Load_StaffNotifier() end
@@ -313,18 +350,14 @@ local function ReloadAllScripts()
     if Shared.DragShoot then Load_DragShoot() end
     if Shared.TriggerBot then Load_TriggerBot() end
     if Shared.AntiFling then Load_AntiFling() end
-    
+    if Shared.VisualPanel then Load_VisualPanel() end
+    if Shared.PurchasePanel then Load_PurchasePanel() end
     if Shared.SilentAim and Shared.SilentAimMethod then
         EnableSilentAimFlags()
         Load_SilentAim_ByMethod()
     end
-    
     if Shared.Camlock then
-        if Shared.Platform == "Mobile" then 
-            Load_Camlock_Mobile() 
-        else 
-            Load_Camlock() 
-        end
+        if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
     end
 end
 
@@ -360,20 +393,10 @@ local function MainUI()
     local function scaleUDim(x, y) return UDim2.new(0, x * SCALE, 0, y * SCALE) end
     local function scaleSize(s) return math.floor(s * SCALE) end
 
-    local BottomBarShadow = Instance.new("Frame")
-    BottomBarShadow.Name = "BottomBarShadow"
-    BottomBarShadow.Size = scaleUDim(580, 75)
-    BottomBarShadow.Position = UDim2.new(0.5, -(290 * SCALE), 1, -(142 * SCALE))
-    BottomBarShadow.BackgroundColor3 = Theme.Shadow
-    BottomBarShadow.BackgroundTransparency = 0.6
-    BottomBarShadow.BorderSizePixel = 0
-    BottomBarShadow.Parent = ScreenGui
-    Instance.new("UICorner", BottomBarShadow).CornerRadius = UDim.new(0, 16 * SCALE)
-
     local BottomBar = Instance.new("Frame")
     BottomBar.Name = "BottomBar"
     BottomBar.Size = scaleUDim(570, 65)
-    BottomBar.Position = UDim2.new(0.5, -(285 * SCALE), 1, -(148 * SCALE))
+    BottomBar.Position = UDim2.new(0.5, -(285 * SCALE), 1, -(163 * SCALE))
     BottomBar.BackgroundColor3 = Theme.Background
     BottomBar.BorderSizePixel = 0
     BottomBar.Parent = ScreenGui
@@ -424,15 +447,6 @@ local function MainUI()
     XStroke.Transparency = 0.3
     XStroke.Parent = XLabel
 
-    local xGrad = Instance.new("UIGradient")
-    xGrad.Rotation = 45
-    xGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 50, 255)),
-        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 130, 255)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 30, 200))
-    })
-    xGrad.Parent = XLabel
-
     local Logo2 = Instance.new("ImageLabel")
     Logo2.Name = "Logo2"
     Logo2.Size = scaleUDim(40, 40)
@@ -477,7 +491,7 @@ local function MainUI()
     SubTitle.Size = scaleUDim(300, 15)
     SubTitle.Position = UDim2.new(0, 140 * SCALE, 0, 35 * SCALE)
     SubTitle.BackgroundTransparency = 1
-    SubTitle.Text = Shared.Platform .. " Edition | newbois!"
+    SubTitle.Text = Shared.Platform .. " Edition | developed by schmeckt"
     SubTitle.Font = Enum.Font.GothamMedium
     SubTitle.TextSize = scaleSize(11)
     SubTitle.TextColor3 = Theme.SubText
@@ -492,58 +506,6 @@ local function MainUI()
         ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
     })
     subGrad.Parent = SubTitle
-
-    local colorCycleConnection
-    task.spawn(function()
-        local phase = 0
-        colorCycleConnection = RunService.Heartbeat:Connect(function(dt)
-            if not BottomBar.Parent then
-                colorCycleConnection:Disconnect()
-                return
-            end
-            phase = (phase + dt * 0.8) % 1
-            local offset1 = phase
-            local offset2 = (phase + 0.25) % 1
-            local offset3 = (phase + 0.5) % 1
-            local offset4 = (phase + 0.75) % 1
-            local function lerpColor(t)
-                local colors = {
-                    Color3.fromRGB(255, 20, 147),
-                    Color3.fromRGB(220, 20, 60),
-                    Color3.fromRGB(180, 50, 255),
-                    Color3.fromRGB(255, 105, 180),
-                }
-                local index = math.floor(t * #colors) + 1
-                local nextIndex = (index % #colors) + 1
-                local localT = (t * #colors) % 1
-                return colors[index]:Lerp(colors[nextIndex], localT)
-            end
-            titleGrad.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, lerpColor(offset1)),
-                ColorSequenceKeypoint.new(0.33, lerpColor(offset2)),
-                ColorSequenceKeypoint.new(0.66, lerpColor(offset3)),
-                ColorSequenceKeypoint.new(1, lerpColor(offset4))
-            })
-            subGrad.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, lerpColor(offset2)),
-                ColorSequenceKeypoint.new(0.5, lerpColor(offset3)),
-                ColorSequenceKeypoint.new(1, lerpColor(offset4))
-            })
-            xGrad.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, lerpColor(offset3)),
-                ColorSequenceKeypoint.new(0.5, lerpColor(offset4)),
-                ColorSequenceKeypoint.new(1, lerpColor(offset1))
-            })
-            barStrokeGrad.Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, lerpColor(offset1)),
-                ColorSequenceKeypoint.new(0.5, lerpColor(offset2)),
-                ColorSequenceKeypoint.new(1, lerpColor(offset3))
-            })
-            LogoStroke.Color = lerpColor(offset1)
-            Logo2Stroke.Color = lerpColor(offset3)
-            XStroke.Color = lerpColor(offset2)
-        end)
-    end)
 
     local StatsFrame = Instance.new("Frame")
     StatsFrame.Size = UDim2.new(0, 110 * SCALE, 0, 48 * SCALE)
@@ -572,7 +534,7 @@ local function MainUI()
             local ping = 0
             pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
             StatsLabel.Text = "FPS: " .. fps .. "\nPing: " .. ping .. "ms"
-            task.wait(0.5)
+            task.wait(1)
         end
     end)
 
@@ -717,7 +679,6 @@ local function MainUI()
 
         local SecText = Instance.new("TextLabel")
         SecText.Size = scaleUDim(250, 30)
-        SecText.Position = UDim2.new(0, 0, 0, 0)
         SecText.BackgroundTransparency = 1
         SecText.Text = text
         SecText.TextColor3 = Theme.Accent
@@ -750,10 +711,10 @@ local function MainUI()
             ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 50, 255)),
             ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 105, 180))
         })
-lineGrad.Transparency = NumberSequence.new({
-    NumberSequenceKeypoint.new(0, 0),
-    NumberSequenceKeypoint.new(1, 0.8)
-})
+        lineGrad.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(1, 0.8)
+        })
 
         return SecFrame
     end
@@ -884,6 +845,8 @@ lineGrad.Transparency = NumberSequence.new({
     CreateSwitch("Staff Notifier", Shared.StaffNotifier, function(s) Shared.StaffNotifier = s if s then Load_StaffNotifier() else Stop_StaffNotifier() end end)
     CreateSwitch("Player Panel", Shared.PlayerPanel, function(s) Shared.PlayerPanel = s if s then Load_PlayerPanel() else Stop_PlayerPanel() end end)
     CreateSwitch("Target Panel", Shared.TargetPanel, function(s) Shared.TargetPanel = s if s then Load_Target() else Stop_TargetPanel() end end)
+    CreateSwitch("Visual Panel", Shared.VisualPanel, function(s) Shared.VisualPanel = s if s then Load_VisualPanel() else Stop_VisualPanel() end end)
+    CreateSwitch("Purchase Panel", Shared.PurchasePanel, function(s) Shared.PurchasePanel = s if s then Load_PurchasePanel() else Stop_PurchasePanel() end end)
     CreateSwitch("Anti Fling", Shared.AntiFling, function(s) Shared.AntiFling = s if s then Load_AntiFling() end end)
     CreateSwitch("Instant Stomp", Shared.InstantStomp, function(s) Shared.InstantStomp = s if s then Load_InstantStomp() else Stop_InstantStomp() end end)
     CreateSwitch("Auto Reload", Shared.AutoReload, function(s) Shared.AutoReload = s if s then Load_AutoReload_S() end end)
@@ -1000,10 +963,7 @@ lineGrad.Transparency = NumberSequence.new({
         Shared.SilentAimMethod = "FOV"
         updateMethodButtons()
         Shared.SaveConfig()
-        if Shared.SilentAim then
-            EnableSilentAimFlags()
-            Load_SilentAim_ByMethod()
-        end
+        if Shared.SilentAim then EnableSilentAimFlags() Load_SilentAim_ByMethod() end
     end)
 
     QBtn.MouseButton1Click:Connect(function()
@@ -1014,10 +974,7 @@ lineGrad.Transparency = NumberSequence.new({
         Shared.SilentAimMethod = "QMethod"
         updateMethodButtons()
         Shared.SaveConfig()
-        if Shared.SilentAim then
-            EnableSilentAimFlags()
-            Load_SilentAim_ByMethod()
-        end
+        if Shared.SilentAim then EnableSilentAimFlags() Load_SilentAim_ByMethod() end
     end)
 
     MobileBtn.MouseButton1Click:Connect(function()
@@ -1028,10 +985,7 @@ lineGrad.Transparency = NumberSequence.new({
         Shared.SilentAimMethod = "MobileMethod"
         updateMethodButtons()
         Shared.SaveConfig()
-        if Shared.SilentAim then
-            EnableSilentAimFlags()
-            Load_SilentAim_ByMethod()
-        end
+        if Shared.SilentAim then EnableSilentAimFlags() Load_SilentAim_ByMethod() end
     end)
 
     CreateSwitch("Camlock", Shared.Camlock, function(s)
@@ -1097,7 +1051,7 @@ lineGrad.Transparency = NumberSequence.new({
         MobBtn.BackgroundColor3 = (Shared.Platform == "Mobile") and Theme.Purple or Theme.Card
         PCStroke.Color = (Shared.Platform == "PC") and Theme.PurpleLight or Theme.Stroke
         MobStroke2.Color = (Shared.Platform == "Mobile") and Theme.PurpleLight or Theme.Stroke
-        SubTitle.Text = Shared.Platform .. " Edition | newbois!"
+        SubTitle.Text = Shared.Platform .. " Edition | developed by schmeckt"
         RestartLabel.Visible = true
         if Shared.SilentAim then
             Stop_SilentAim_All()
@@ -1112,11 +1066,11 @@ lineGrad.Transparency = NumberSequence.new({
     MobBtn.MouseButton1Click:Connect(function() Shared.Platform = "Mobile" updatePlatBtns() end)
 
     CreateButton("Close GUI", function() DisableAllScripts(); Shared.SaveConfig(); ScreenGui:Destroy() end)
-    CreateButton("Restart GUI", function() 
-        ScreenGui:Destroy(); 
-        Shared.SaveConfig(); 
+    CreateButton("Restart GUI", function()
+        ScreenGui:Destroy();
+        Shared.SaveConfig();
         ReloadAllScripts();
-        MainUI() 
+        MainUI()
     end)
 
     local UIList2 = Scroll:FindFirstChildOfClass("UIListLayout")
@@ -1168,7 +1122,6 @@ lineGrad.Transparency = NumberSequence.new({
         if input == dragInputBar and draggingBar then
             local delta = input.Position - dragStartBar
             BottomBar.Position = UDim2.new(startPosBar.X.Scale, startPosBar.X.Offset + delta.X, startPosBar.Y.Scale, startPosBar.Y.Offset + delta.Y)
-            BottomBarShadow.Position = UDim2.new(startPosBar.X.Scale, startPosBar.X.Offset + delta.X - (5 * SCALE), startPosBar.Y.Scale, startPosBar.Y.Offset + delta.Y + (5 * SCALE))
         end
     end)
     UserInputService.InputEnded:Connect(function(input)
@@ -1194,6 +1147,8 @@ task.defer(function()
     if Shared.StaffNotifier then Load_StaffNotifier() end
     if Shared.PlayerPanel then Load_PlayerPanel() end
     if Shared.TargetPanel then Load_Target() end
+    if Shared.VisualPanel then Load_VisualPanel() end
+    if Shared.PurchasePanel then Load_PurchasePanel() end
     if Shared.Camlock then
         if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
     end
