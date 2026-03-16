@@ -13,10 +13,11 @@ local HttpService = game:GetService("HttpService")
 local lp = Players.LocalPlayer
 
 local BlacklistedUsers = {
-    ["raphyysalt"] = true,
+    [3856156647] = true,
+    [8663846070] = true,
 }
 
-if BlacklistedUsers[string.lower(lp.Name)] then
+if BlacklistedUsers[lp.UserId] then
     lp:Kick("🛡️ ShadowPepper Hub:\nYou are permanently blacklisted from using this script.")
     return
 end
