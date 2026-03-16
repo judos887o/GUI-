@@ -1,124 +1,83 @@
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
+if not game:IsLoaded() then game.Loaded:Wait() end
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
-local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
-local Stats = game:GetService("Stats")
-local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 local SoundService = game:GetService("SoundService")
+local Stats = game:GetService("Stats")
+local HttpService = game:GetService("HttpService")
 
 local lp = Players.LocalPlayer
-local INTRO_LOGO_ASSET = "rbxassetid://121759217057084"
-local CLICK_SOUND_ID = "rbxassetid://100809160609628"
+local CLICK_SOUND = "rbxassetid://100809160609628"
+local LOGO_ASSET = "rbxassetid://121759217057084"
+local CONFIG_FILE = "SchmecktHub_RedPro_Settings_" .. lp.UserId .. ".json"
+
+pcall(function()
+    if CoreGui:FindFirstChild("SchmecktHubPro") then CoreGui.SchmecktHubPro:Destroy() end
+    if getgenv().SMKT_DISABLE then getgenv().SMKT_DISABLE() end
+end)
 
 getgenv().SchmecktHubPC = getgenv().SchmecktHubPC or {}
 local Shared = getgenv().SchmecktHubPC
 
-Shared.TotalExecutions = (Shared.TotalExecutions or 0) + 1
+Shared.Platform = Shared.Platform or "PC"
+Shared.SilentAimMethod = Shared.SilentAimMethod or "QMethod"
 Shared.AutoArmor = Shared.AutoArmor or false
 Shared.StaffNotifier = Shared.StaffNotifier or false
 Shared.TriggerBot = Shared.TriggerBot or false
 Shared.Camlock = Shared.Camlock or false
 Shared.SilentAim = Shared.SilentAim or false
-Shared.SilentAimMethod = Shared.SilentAimMethod
 Shared.AutoReload = Shared.AutoReload or false
 Shared.PlayerPanel = Shared.PlayerPanel or false
 Shared.DragShoot = Shared.DragShoot or false
+Shared.TargetPanel = Shared.TargetPanel or false
 Shared.InstantStomp = Shared.InstantStomp or false
 Shared.AntiFling = Shared.AntiFling or false
+Shared.VisualPanel = Shared.VisualPanel or false
 Shared.PurchasePanel = Shared.PurchasePanel or false
-Shared.Platform = Shared.Platform or "PC"
 Shared.Connections = Shared.Connections or {}
-Shared.ShadowPepperUsers = Shared.ShadowPepperUsers or {}
-Shared.TargetTabContainer = nil
-Shared.VisualsTabContainer = nil
+Shared.TargetTabContainer = Instance.new("Folder") 
+Shared.VisualsTabContainer = Instance.new("Folder")
 
-local CONFIG_DIR = "SchmecktHub"
-local CONFIG_FILE = CONFIG_DIR .. "/config_ghost_red.json"
-local FS_OK = (typeof(isfile) == "function" and typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(makefolder) == "function" and typeof(isfolder) == "function")
-
-local function serializeConfig()
-    return {
-        Platform = Shared.Platform,
-        SilentAimMethod = Shared.SilentAimMethod,
-        Toggles = {
-            AutoArmor = Shared.AutoArmor,
-            StaffNotifier = Shared.StaffNotifier,
-            TriggerBot = Shared.TriggerBot,
-            Camlock = Shared.Camlock,
-            SilentAim = Shared.SilentAim,
-            AutoReload = Shared.AutoReload,
-            PlayerPanel = Shared.PlayerPanel,
-            DragShoot = Shared.DragShoot,
-            InstantStomp = Shared.InstantStomp,
-            AntiFling = Shared.AntiFling,
-            PurchasePanel = Shared.PurchasePanel,
-        }
-    }
-end
-
-local function applyConfig(cfg)
-    if not cfg then return end
-    Shared.Platform = cfg.Platform or Shared.Platform
-    Shared.SilentAimMethod = cfg.SilentAimMethod
-    local T = cfg.Toggles or {}
-    for k, v in pairs(T) do
-        if type(v) == "boolean" and Shared[k] ~= nil then
-            Shared[k] = v
-        end
+pcall(function()
+    if isfile and isfile(CONFIG_FILE) then
+        local d = HttpService:JSONDecode(readfile(CONFIG_FILE))
+        for k, v in pairs(d) do Shared[k] = v end
     end
-end
+end)
 
-function Shared.SaveConfig()
-    task.spawn(function()
-        pcall(function()
-            local json = HttpService:JSONEncode(serializeConfig())
-            if FS_OK then
-                if not isfolder(CONFIG_DIR) then makefolder(CONFIG_DIR) end
-                writefile(CONFIG_FILE, json)
-            else
-                getgenv()._SchmecktLastCfg = json
-            end
-        end)
+local function SaveConfig()
+    pcall(function()
+        local s = {
+            Platform = Shared.Platform, SilentAimMethod = Shared.SilentAimMethod,
+            AutoArmor = Shared.AutoArmor, StaffNotifier = Shared.StaffNotifier,
+            TriggerBot = Shared.TriggerBot, Camlock = Shared.Camlock,
+            SilentAim = Shared.SilentAim, AutoReload = Shared.AutoReload,
+            PlayerPanel = Shared.PlayerPanel, DragShoot = Shared.DragShoot,
+            TargetPanel = Shared.TargetPanel, InstantStomp = Shared.InstantStomp,
+            AntiFling = Shared.AntiFling, VisualPanel = Shared.VisualPanel,
+            PurchasePanel = Shared.PurchasePanel
+        }
+        writefile(CONFIG_FILE, HttpService:JSONEncode(s))
     end)
 end
 
-local function LoadConfig()
-    local raw
-    if FS_OK and isfile(CONFIG_FILE) then
-        pcall(function() raw = readfile(CONFIG_FILE) end)
-    elseif getgenv()._SchmecktLastCfg then
-        raw = getgenv()._SchmecktLastCfg
-    end
-    if raw then
-        local ok, data = pcall(function() return HttpService:JSONDecode(raw) end)
-        if ok and data then applyConfig(data) end
-    end
-end
-LoadConfig()
-
-local clickSound = Instance.new("Sound")
-clickSound.SoundId = CLICK_SOUND_ID
-clickSound.Volume = 0.5
-clickSound.PlayOnRemove = false
-clickSound.Parent = SoundService
+local sfx = Instance.new("Sound")
+sfx.SoundId = CLICK_SOUND
+sfx.Volume = 0.5
+sfx.Parent = SoundService
 
 local function playClick()
-    task.spawn(function()
-        pcall(function()
-            clickSound:Stop()
-            clickSound:Play()
-        end)
-    end)
+    task.spawn(function() pcall(function() sfx:Stop() sfx:Play() end) end)
 end
 
 local function safeLoad(url)
     task.spawn(function()
-        local success, content = pcall(function() return game:HttpGet(url, true) end)
-        if not success then return end
-        local func, err = loadstring(content)
-        if func then pcall(func) end
+        local ok, c = pcall(function() return game:HttpGet(url, true) end)
+        if ok then local f = loadstring(c); if f then pcall(f) end end
     end)
 end
 
@@ -128,69 +87,17 @@ local function Load_TriggerBot() safeLoad("https://raw.githubusercontent.com/jud
 local function Load_Camlock() safeLoad("https://raw.githubusercontent.com/judos887o/camlock-pc/main/camlcok") end
 local function Load_SilentAim_FOV() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-FOV-METHOD/main/teat") end
 local function Load_Internal_Q_Method() safeLoad("https://raw.githubusercontent.com/judos887o/Silent-Aim/main/silent") end
-local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/main/teat") end
-local function Load_AutoReload_S() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/main/teat") end
-local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/main/teat") end
-local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/test-target/refs/heads/main/as") end
-local function Load_Visual() safeLoad("https://raw.githubusercontent.com/judos887o/test-visual/refs/heads/main/a") end
-local function Load_SilentAim_Mobile_Remote() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/main/teat") end
+local function Load_SilentAim_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/silent-aim-mobile/main/teat") end
 local function Load_Camlock_Mobile() safeLoad("https://raw.githubusercontent.com/judos887o/camnlock-mobiel/main/teat") end
+local function Load_PlayerPanel() safeLoad("https://raw.githubusercontent.com/judos887o/PlayerGui-Da-hood-script-schmeckt/main/teat") end
+local function Load_AutoReload() safeLoad("https://raw.githubusercontent.com/judos887o/Auto-reload-da-hood-schmeckt/main/teat") end
+local function Load_DragShoot() safeLoad("https://raw.githubusercontent.com/judos887o/drag-shoot-da-hood-schmeckt/main/teat") end
+local function Load_Target() safeLoad("https://raw.githubusercontent.com/judos887o/targer/refs/heads/main/asd") end
 local function Load_InstantStomp() safeLoad("https://raw.githubusercontent.com/judos887o/momenzinstants/main/teats") end
 local function Load_AntiFling() safeLoad("https://raw.githubusercontent.com/judos887o/ANTI-FL/main/te") end
 local function Load_ShadowPepperUsers() safeLoad("https://raw.githubusercontent.com/judos887o/user/refs/heads/main/a") end
+local function Load_VisualPanel() safeLoad("https://raw.githubusercontent.com/judos887o/visual-panel-/refs/heads/main/a") end
 local function Load_PurchasePanel() safeLoad("https://raw.githubusercontent.com/judos887o/purchased/refs/heads/main/a") end
-
-local function Stop_PurchasePanel()
-    local S = getgenv().SchmecktHubPC
-    if S and S.Connections and S.Connections["PurchasePanel"] then
-        for _, c in pairs(S.Connections["PurchasePanel"]) do pcall(function() c:Disconnect() end) end
-        S.Connections["PurchasePanel"] = nil
-    end
-    local g = CoreGui:FindFirstChild("SchmecktPurchasePanel") if g then g:Destroy() end
-end
-
-local function Stop_InstantStomp()
-    local S = getgenv().SchmecktHubPC
-    if S and S.InstantStomp_Destroy then pcall(S.InstantStomp_Destroy) S.InstantStomp_Destroy = nil end
-    if S and S.Connections then
-        if S.Connections["InstantStompCore"] then
-            for _, c in pairs(S.Connections["InstantStompCore"]) do pcall(function() c:Disconnect() end) end
-            S.Connections["InstantStompCore"] = nil
-        end
-    end
-    local g = CoreGui:FindFirstChild("Schmeckt_InstantStomp_UI") if g then g:Destroy() end
-    if lp and lp:FindFirstChild("PlayerGui") then
-        local pgUI = lp.PlayerGui:FindFirstChild("Schmeckt_InstantStomp_UI")
-        if pgUI then pgUI:Destroy() end
-        local isGui = lp.PlayerGui:FindFirstChild("InstantStompGui")
-        if isGui then isGui:Destroy() end
-    end
-    local ring = Workspace:FindFirstChild("Schmeckt_InstantStomp_Ring") if ring then ring:Destroy() end
-end
-
-local function Stop_PlayerPanel()
-    local S = getgenv().SchmecktHubPC
-    if S and S.Connections and S.Connections["PlayerPanel"] then
-        for _, c in pairs(S.Connections["PlayerPanel"]) do pcall(function() c:Disconnect() end) end
-        S.Connections["PlayerPanel"] = nil
-    end
-    local g = CoreGui:FindFirstChild("SchmecktPlayerPanel")
-    if g then g:Destroy() end
-end
-
-local function Stop_StaffNotifier()
-    local S = getgenv().SchmecktHubPC
-    if S and S.Connections and S.Connections["StaffNotifier"] then
-        for _, c in pairs(S.Connections["StaffNotifier"]) do pcall(function() c:Disconnect() end) end
-        S.Connections["StaffNotifier"] = nil
-    end
-    if lp and lp:FindFirstChild("PlayerGui") then
-        local sn = lp.PlayerGui:FindFirstChild("StaffNotifierGui")
-        if sn then sn:Destroy() end
-        local sl = lp.PlayerGui:FindFirstChild("StaffListGui")
-        if sl then sl:Destroy() end
-    end
-end
 
 local function EnableSilentAimFlags()
     Shared.SilentAim = true
@@ -205,8 +112,8 @@ local function EnableSilentAimFlags()
         getgenv().SilentAimQ = true
         getgenv().QMethodSilentAim = true
     elseif Shared.SilentAimMethod == "MobileMethod" then
-        local Mobile = getgenv().SchmecktHubMobile
-        if Mobile then Mobile.SilentAim = true end
+        local m = getgenv().SchmecktHubMobile
+        if m then m.SilentAim = true end
     end
 end
 
@@ -219,1026 +126,494 @@ local function DisableSilentAimFlags()
     getgenv().SilentAimActive = false
     getgenv().FOVSilentAim = false
     getgenv().QMethodSilentAim = false
-    local Mobile = getgenv().SchmecktHubMobile
-    if Mobile then Mobile.SilentAim = false end
+    local m = getgenv().SchmecktHubMobile
+    if m then m.SilentAim = false end
 end
 
 local function CleanupSilentAim()
     DisableSilentAimFlags()
-    local destroyFuncs = {
-        "SilentAim_Q_Destroy", "SilentAim_FOV_Destroy", "DisableSilentAim", "StopSilentAim",
-        "SilentAimDestroy", "DestroySilentAim", "SilentAim_Destroy", "FOV_Destroy", "Q_Destroy"
-    }
-    for _, funcName in ipairs(destroyFuncs) do
-        if getgenv()[funcName] then pcall(getgenv()[funcName]) getgenv()[funcName] = nil end
-    end
-    if Shared and Shared.Connections then
-        for key, list in pairs(Shared.Connections) do
-            local keyLower = tostring(key):lower()
-            if keyLower:find("silent") or keyLower:find("aim") or keyLower:find("fov") then
-                if type(list) == "table" then
-                    for _, c in ipairs(list) do pcall(function() c:Disconnect() end) end
-                elseif typeof(list) == "RBXScriptConnection" then
-                    pcall(function() list:Disconnect() end)
-                end
-                Shared.Connections[key] = nil
+    local df = {"SilentAim_Q_Destroy", "SilentAim_FOV_Destroy", "DisableSilentAim", "StopSilentAim", "SilentAimDestroy", "DestroySilentAim", "SilentAim_Destroy", "FOV_Destroy", "Q_Destroy"}
+    for _, fn in ipairs(df) do if getgenv()[fn] then pcall(getgenv()[fn]) getgenv()[fn] = nil end end
+    if Shared.Connections then
+        for k, l in pairs(Shared.Connections) do
+            local kl = tostring(k):lower()
+            if kl:find("silent") or kl:find("aim") or kl:find("fov") then
+                if type(l) == "table" then for _, c in ipairs(l) do pcall(function() c:Disconnect() end) end
+                elseif typeof(l) == "RBXScriptConnection" then pcall(function() l:Disconnect() end) end
+                Shared.Connections[k] = nil
             end
         end
     end
-    local connectionNames = {"SilentAimConnection", "SilentAimRender", "SilentAimLoop", "FOVConnection", "FOVRender", "QMethodConnection", "SilentRenderStep", "SilentHeartbeat"}
-    for _, connName in ipairs(connectionNames) do
-        if getgenv()[connName] then pcall(function() getgenv()[connName]:Disconnect() end) getgenv()[connName] = nil end
+    local cn = {"SilentAimConnection", "SilentAimRender", "SilentAimLoop", "FOVConnection", "FOVRender", "QMethodConnection", "SilentRenderStep", "SilentHeartbeat"}
+    for _, n in ipairs(cn) do if getgenv()[n] then pcall(function() getgenv()[n]:Disconnect() end) getgenv()[n] = nil end end
+    local un = {"Schmeckt_SilentAim_UI", "Schmeckt_SilentAim_FOV_UI", "SchmecktSilentAim", "SilentStatusQ", "SilentAimUI", "SilentAimFOV", "SilentAimGUI", "FOVCircleGUI", "SilentAim_GUI", "Silent_Aim_UI"}
+    for _, n in ipairs(un) do
+        local g = CoreGui:FindFirstChild(n) if g then pcall(function() g:Destroy() end) end
+        if lp and lp:FindFirstChild("PlayerGui") then
+            local g2 = lp.PlayerGui:FindFirstChild(n) if g2 then pcall(function() g2:Destroy() end) end
+        end
     end
-    local uiNames = {"Schmeckt_SilentAim_UI", "Schmeckt_SilentAim_FOV_UI", "SchmecktSilentAim", "SilentStatusQ", "SilentAimUI", "SilentAimFOV", "SilentAimGUI", "FOVCircleGUI", "SilentAim_GUI", "Silent_Aim_UI"}
-    for _, n in ipairs(uiNames) do local g = CoreGui:FindFirstChild(n) if g then pcall(function() g:Destroy() end) end end
-    if lp and lp:FindFirstChild("PlayerGui") then
-        local pg = lp.PlayerGui
-        for _, n in ipairs(uiNames) do local g2 = pg:FindFirstChild(n) if g2 then pcall(function() g2:Destroy() end) end end
-    end
-    local drawingNames = {"SilentAimFOVCircle", "FOVCircle", "AimCircle", "SilentCircle"}
-    for _, drawName in ipairs(drawingNames) do
-        if getgenv()[drawName] then pcall(function() getgenv()[drawName]:Remove() end) getgenv()[drawName] = nil end
-    end
-    local Mobile = getgenv().SchmecktHubMobile
-    if Mobile and Mobile._MobileGUI then pcall(function() Mobile._MobileGUI:Destroy() end) Mobile._MobileGUI = nil end
+    local dn = {"SilentAimFOVCircle", "FOVCircle", "AimCircle", "SilentCircle"}
+    for _, n in ipairs(dn) do if getgenv()[n] then pcall(function() getgenv()[n]:Remove() end) getgenv()[n] = nil end end
 end
 
-local function Stop_SilentAim_All()
-    Shared.SilentAim = false
+local function Load_SilentMethod()
     CleanupSilentAim()
+    if not Shared.SilentAim then return end
+    EnableSilentAimFlags()
+    if Shared.SilentAimMethod == "FOV" then Load_SilentAim_FOV()
+    elseif Shared.SilentAimMethod == "QMethod" then Load_Internal_Q_Method()
+    elseif Shared.SilentAimMethod == "MobileMethod" then Load_SilentAim_Mobile() end
 end
 
-local function Stop_Camlock_PC()
+local function Stop_Camlock()
     if CoreGui:FindFirstChild("SchmecktCamlock") then CoreGui.SchmecktCamlock:Destroy() end
+    local m = getgenv().SchmecktHubMobile
+    if m and m._CamlockGUI then pcall(function() m._CamlockGUI:Destroy() end) m._CamlockGUI = nil end
 end
 
-local function Stop_Camlock_Mobile()
-    local M = getgenv().SchmecktHubMobile
-    if M and M._CamlockGUI then pcall(function() M._CamlockGUI:Destroy() end) M._CamlockGUI = nil end
+local function Load_CamlockMethod()
+    Stop_Camlock()
+    if not Shared.Camlock then return end
+    if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
 end
 
-local function Stop_AntiFling_External()
-    Shared.AntiFling = false
+local function Stop_TargetPanel()
+    if Shared.Connections and Shared.Connections["TargetScript"] then
+        for _, c in pairs(Shared.Connections["TargetScript"]) do pcall(function() c:Disconnect() end) end
+    end
+    if lp and lp:FindFirstChild("PlayerGui") then
+        local tg = lp.PlayerGui:FindFirstChild("TargetGui") if tg then tg:Destroy() end
+    end
 end
 
-local function Load_SilentAim_ByMethod()
-    local m = Shared.SilentAimMethod
-    if m == "FOV" then Load_SilentAim_FOV()
-    elseif m == "QMethod" then Load_Internal_Q_Method()
-    elseif m == "MobileMethod" then Load_SilentAim_Mobile_Remote() end
+local function Stop_VisualPanel()
+    if Shared.Connections and Shared.Connections["SchmecktESP"] then
+        for _, c in pairs(Shared.Connections["SchmecktESP"]) do pcall(function() c:Disconnect() end) end
+    end
+    local g = CoreGui:FindFirstChild("SchmecktESPPanel") if g then g:Destroy() end
+    local o = CoreGui:FindFirstChild("SchmecktESPOverlay") if o then o:Destroy() end
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Character then
+            local hl = p.Character:FindFirstChild("SchmecktHighlight") if hl then hl:Destroy() end
+        end
+    end
 end
 
-local function DisableAllScripts()
-    Shared.AutoArmor = false
-    Shared.StaffNotifier = false
-    Shared.TriggerBot = false
-    Shared.Camlock = false
-    Shared.SilentAim = false
-    Shared.AutoReload = false
-    Shared.PlayerPanel = false
-    Shared.DragShoot = false
-    Shared.InstantStomp = false
-    Shared.AntiFling = false
-    Shared.PurchasePanel = false
-    Stop_InstantStomp()
-    Stop_SilentAim_All()
-    Stop_Camlock_PC()
-    Stop_Camlock_Mobile()
-    Stop_AntiFling_External()
-    Stop_PlayerPanel()
-    Stop_StaffNotifier()
-    Stop_PurchasePanel()
+local function Stop_Generic(name1, name2)
+    local g1 = CoreGui:FindFirstChild(name1) if g1 then g1:Destroy() end
+    if lp and lp:FindFirstChild("PlayerGui") and name2 then
+        local g2 = lp.PlayerGui:FindFirstChild(name2) if g2 then g2:Destroy() end
+    end
 end
 
-local function StopAllWithoutDisabling()
-    Stop_InstantStomp()
-    Stop_SilentAim_All()
-    Stop_Camlock_PC()
-    Stop_Camlock_Mobile()
-    Stop_PlayerPanel()
-    Stop_StaffNotifier()
-    Stop_PurchasePanel()
+local function StopAllScripts()
+    Stop_Generic("SchmecktCamlock")
+    Stop_Generic("SchmecktPlayerPanel")
+    Stop_Generic("SchmecktPurchasePanel")
+    Stop_Generic("Schmeckt_InstantStomp_UI", "InstantStompGui")
+    if lp and lp:FindFirstChild("PlayerGui") then
+        local sn = lp.PlayerGui:FindFirstChild("StaffNotifierGui") if sn then sn:Destroy() end
+        local sl = lp.PlayerGui:FindFirstChild("StaffListGui") if sl then sl:Destroy() end
+    end
+    CleanupSilentAim()
+    Stop_TargetPanel()
+    Stop_VisualPanel()
 end
 
-local function ReloadAllScripts()
-    StopAllWithoutDisabling()
-    task.wait(0.2)
-    if Shared.InstantStomp then Load_InstantStomp() end
+local function StartAllScripts()
+    Load_ShadowPepperUsers()
+    Load_Target()
+    Load_VisualPanel()
     if Shared.AutoArmor then Load_AutoArmor() end
-    if Shared.StaffNotifier then Load_StaffNotifier() end
-    if Shared.PlayerPanel then Load_PlayerPanel() end
-    if Shared.AutoReload then Load_AutoReload_S() end
-    if Shared.DragShoot then Load_DragShoot() end
+    if Shared.SilentAim then Load_SilentMethod() end
+    if Shared.Camlock then Load_CamlockMethod() end
     if Shared.TriggerBot then Load_TriggerBot() end
+    if Shared.AutoReload then Load_AutoReload() end
+    if Shared.DragShoot then Load_DragShoot() end
+    if Shared.InstantStomp then Load_InstantStomp() end
     if Shared.AntiFling then Load_AntiFling() end
+    if Shared.PlayerPanel then Load_PlayerPanel() end
     if Shared.PurchasePanel then Load_PurchasePanel() end
-    if Shared.SilentAim and Shared.SilentAimMethod then
-        EnableSilentAimFlags()
-        Load_SilentAim_ByMethod()
-    end
-    if Shared.Camlock then
-        if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
-    end
+    if Shared.StaffNotifier then Load_StaffNotifier() end
 end
 
-local function CreateUI()
-    if CoreGui:FindFirstChild("SchmecktHub_UI_Red") then CoreGui.SchmecktHub_UI_Red:Destroy() end
+local RenderConnections = {}
+local function ClearRender()
+    for _, c in pairs(RenderConnections) do pcall(function() c:Disconnect() end) end
+    RenderConnections = {}
+end
 
+getgenv().SMKT_DISABLE = function()
+    ClearRender()
+    if CoreGui:FindFirstChild("SchmecktHubPro") then CoreGui.SchmecktHubPro:Destroy() end
+end
+
+local function BuildUI()
     local IS_MOBILE = Shared.Platform == "Mobile" or UserInputService.TouchEnabled
-    local SCALE = IS_MOBILE and 0.5 or 1
-
-    local COL_OFF = Color3.fromRGB(60, 0, 0)
-    local COL_ON = Color3.fromRGB(255, 60, 60)
-    local COL_STROKE_OFF = Color3.fromRGB(120, 30, 30)
-    local COL_STROKE_ON = Color3.fromRGB(255, 180, 180)
-    local COL_TEXT_OFF = Color3.fromRGB(180, 130, 130)
-    local COL_TEXT_ON = Color3.fromRGB(255, 255, 255)
-
-    local THEME = {
-        BgMain       = Color3.fromRGB(90, 0, 0),
-        BgTop        = Color3.fromRGB(140, 0, 0),
-        BgInner      = Color3.fromRGB(120, 0, 0),
-        Sidebar      = Color3.fromRGB(110, 0, 0),
-        Content      = Color3.fromRGB(120, 0, 0),
-        Card         = Color3.fromRGB(135, 0, 0),
-        Card2        = Color3.fromRGB(150, 0, 0),
-        SectionBg    = Color3.fromRGB(100, 0, 0),
-        Stroke1      = Color3.fromRGB(255, 110, 110),
-        Stroke2      = Color3.fromRGB(255, 150, 150),
-        TabIdle      = Color3.fromRGB(140, 0, 0),
-        TabActive    = Color3.fromRGB(185, 0, 0),
-        ToggleOff    = Color3.fromRGB(175, 50, 120),
-        ToggleOn     = Color3.fromRGB(220, 70, 160),
-        Text         = Color3.fromRGB(255, 255, 255),
-        SubText      = Color3.fromRGB(255, 210, 210),
-        DimText      = Color3.fromRGB(255, 170, 170),
-        Warn         = Color3.fromRGB(255, 200, 100),
-        DevText      = Color3.fromRGB(200, 160, 160),
-    }
-
+    local SCALE = IS_MOBILE and (1 / 2.2) or 1
     local function s(v) return math.floor(v * SCALE) end
 
-    local function corner(inst, px)
-        local c = Instance.new("UICorner"); c.CornerRadius = UDim.new(0, px or 10); c.Parent = inst; return c
-    end
-    local function strokeUI(inst, color, thickness, transparency)
-        local st = Instance.new("UIStroke"); st.Color = color; st.Thickness = thickness or 1; st.Transparency = transparency or 0; st.Parent = inst; return st
-    end
-    local function pad(inst, l, r, t, b)
-        local p = Instance.new("UIPadding"); p.PaddingLeft = UDim.new(0,l or 0); p.PaddingRight = UDim.new(0,r or 0); p.PaddingTop = UDim.new(0,t or 0); p.PaddingBottom = UDim.new(0,b or 0); p.Parent = inst; return p
-    end
+    local Gui = Instance.new("ScreenGui")
+    Gui.Name = "SchmecktHubPro"
+    Gui.ResetOnSpawn = false
+    Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    Gui.Parent = CoreGui
 
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "SchmecktHub_UI_Red"
-    gui.IgnoreGuiInset = true
-    gui.ResetOnSpawn = false
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.Parent = CoreGui
+    local Watermark = Instance.new("Frame", Gui)
+    Watermark.Size = UDim2.new(0, s(440), 0, s(46))
+    Watermark.Position = UDim2.new(0.5, -s(220), 0, s(20))
+    Watermark.BackgroundColor3 = Color3.fromRGB(12, 8, 8)
+    Watermark.BackgroundTransparency = 0.1
+    Watermark.BorderSizePixel = 0
+    Instance.new("UICorner", Watermark).CornerRadius = UDim.new(0, s(8))
+    Instance.new("UIStroke", Watermark).Color = Color3.fromRGB(180, 40, 40)
 
-    local MAIN_W = s(780)
-    local MAIN_H = s(500)
-    local SIDEBAR_W = s(200)
-    local TOPBAR_H = s(52)
-    local ROW_H = s(46)
-    local TAB_H = s(36)
-    local FONT_TITLE = s(17)
-    local FONT_DEV = s(11)
-    local FONT_LABEL = s(16)
-    local FONT_TAB = s(15)
-    local FONT_SMALL = s(14)
-    local FONT_METHOD = s(13)
-    local CORNER_R = s(14)
-    local CORNER_SM = s(12)
-    local CORNER_XS = s(10)
-    local CORNER_PILL = s(999)
-    local PAD_MAIN = s(9)
-    local PAD_INNER = s(10)
-    local PAD_CONTENT = s(14)
-    local TOGGLE_W = s(80)
-    local TOGGLE_H = s(30)
-    local BTN_CLOSE_S = s(32)
+    local WMLogoBox = Instance.new("Frame", Watermark)
+    WMLogoBox.Size = UDim2.new(0, s(32), 0, s(32))
+    WMLogoBox.Position = UDim2.new(0, s(8), 0.5, -s(16))
+    WMLogoBox.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    WMLogoBox.BorderSizePixel = 0
+    Instance.new("UICorner", WMLogoBox).CornerRadius = UDim.new(1, 0)
+    Instance.new("UIStroke", WMLogoBox).Color = Color3.fromRGB(200, 50, 50)
 
-    local NORMAL_SIZE = UDim2.new(0, MAIN_W, 0, MAIN_H)
+    local WMLogo = Instance.new("ImageLabel", WMLogoBox)
+    WMLogo.Size = UDim2.new(1, 0, 1, 0)
+    WMLogo.BackgroundTransparency = 1
+    WMLogo.Image = LOGO_ASSET
+    Instance.new("UICorner", WMLogo).CornerRadius = UDim.new(1, 0)
 
-    local main = Instance.new("Frame")
-    main.Name = "Main"
-    main.AnchorPoint = Vector2.new(0.5, 0.5)
-    main.Position = UDim2.new(0.5, 0, 0.5, 0)
-    main.Size = NORMAL_SIZE
-    main.BackgroundColor3 = THEME.BgMain
-    main.BorderSizePixel = 0
-    main.ZIndex = 2
-    main.Parent = gui
-    corner(main, CORNER_R)
-    strokeUI(main, THEME.Stroke1, s(2), 0)
+    local WMTitle = Instance.new("TextLabel", Watermark)
+    WMTitle.Size = UDim2.new(0, s(200), 0, s(20))
+    WMTitle.Position = UDim2.new(0, s(50), 0, s(5))
+    WMTitle.BackgroundTransparency = 1
+    WMTitle.Text = "ShadowPepper Hub"
+    WMTitle.Font = Enum.Font.GothamBlack
+    WMTitle.TextSize = s(15)
+    WMTitle.TextXAlignment = Enum.TextXAlignment.Left
+    WMTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    
+    local TitleStroke = Instance.new("UIStroke", WMTitle)
+    TitleStroke.Color = Color3.fromRGB(60, 0, 0)
+    TitleStroke.Thickness = 1.5
 
-    local topBar = Instance.new("Frame")
-    topBar.Name = "TopBar"
-    topBar.BackgroundColor3 = THEME.BgTop
-    topBar.BorderSizePixel = 0
-    topBar.Size = UDim2.new(1, -PAD_MAIN*2, 0, TOPBAR_H)
-    topBar.Position = UDim2.new(0, PAD_MAIN, 0, PAD_MAIN)
-    topBar.ZIndex = 3
-    topBar.Parent = main
-    corner(topBar, CORNER_R)
-    strokeUI(topBar, THEME.Stroke2, 1, 0.15)
-
-    local topGrad = Instance.new("UIGradient")
-    topGrad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(165, 0, 0)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 0, 0)),
+    local TitleGrad = Instance.new("UIGradient", WMTitle)
+    TitleGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.0, Color3.fromRGB(255, 160, 160)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 40, 40)),
+        ColorSequenceKeypoint.new(1.0, Color3.fromRGB(255, 160, 160))
     })
-    topGrad.Parent = topBar
+    table.insert(RenderConnections, RunService.RenderStepped:Connect(function()
+        TitleGrad.Offset = Vector2.new(math.sin(tick() * 2) * 0.5, 0)
+    end))
 
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.BackgroundColor3 = Color3.fromRGB(220, 40, 40)
-    closeBtn.Size = UDim2.new(0, BTN_CLOSE_S, 0, BTN_CLOSE_S)
-    closeBtn.Position = UDim2.new(0, s(10), 0.5, -BTN_CLOSE_S/2)
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Text = "X"
-    closeBtn.TextColor3 = THEME.Text
-    closeBtn.TextSize = s(14)
-    closeBtn.ZIndex = 4
-    closeBtn.Parent = topBar
-    corner(closeBtn, CORNER_XS)
+    local WMSub = Instance.new("TextLabel", Watermark)
+    WMSub.Size = UDim2.new(0, s(200), 0, s(16))
+    WMSub.Position = UDim2.new(0, s(50), 0, s(24))
+    WMSub.BackgroundTransparency = 1
+    WMSub.Text = "https://discord.gg/fEPZsRFKng"
+    WMSub.TextColor3 = Color3.fromRGB(200, 120, 120)
+    WMSub.Font = Enum.Font.Gotham
+    WMSub.TextSize = s(11)
+    WMSub.TextXAlignment = Enum.TextXAlignment.Left
 
-    local miniBtn = Instance.new("TextButton")
-    miniBtn.BackgroundColor3 = Color3.fromRGB(200, 55, 55)
-    miniBtn.Size = UDim2.new(0, BTN_CLOSE_S, 0, BTN_CLOSE_S)
-    miniBtn.Position = UDim2.new(0, s(10) + BTN_CLOSE_S + s(6), 0.5, -BTN_CLOSE_S/2)
-    miniBtn.Font = Enum.Font.GothamBold
-    miniBtn.Text = "-"
-    miniBtn.TextColor3 = THEME.Text
-    miniBtn.TextSize = s(18)
-    miniBtn.ZIndex = 4
-    miniBtn.Parent = topBar
-    corner(miniBtn, CORNER_XS)
+    local WMDiv = Instance.new("Frame", Watermark)
+    WMDiv.Size = UDim2.new(0, math.max(1, s(1)), 0, s(30))
+    WMDiv.Position = UDim2.new(1, -s(130), 0.5, -s(15))
+    WMDiv.BackgroundColor3 = Color3.fromRGB(60, 20, 20)
+    WMDiv.BorderSizePixel = 0
 
-    local logoX = s(10) + BTN_CLOSE_S*2 + s(12) + s(6)
-    local topLogo = Instance.new("ImageLabel")
-    topLogo.BackgroundTransparency = 1
-    topLogo.Size = UDim2.new(0, s(34), 0, s(34))
-    topLogo.Position = UDim2.new(0, logoX, 0.5, -s(17))
-    topLogo.Image = INTRO_LOGO_ASSET
-    topLogo.ScaleType = Enum.ScaleType.Crop
-    topLogo.ZIndex = 4
-    topLogo.Parent = topBar
-    corner(topLogo, CORNER_PILL)
-    strokeUI(topLogo, THEME.Stroke2, 1, 0.25)
+    local FPSLabel = Instance.new("TextLabel", Watermark)
+    FPSLabel.Size = UDim2.new(0, s(120), 0, s(16))
+    FPSLabel.Position = UDim2.new(1, -s(120), 0, s(5))
+    FPSLabel.BackgroundTransparency = 1
+    FPSLabel.Text = "FPS: 0"
+    FPSLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    FPSLabel.Font = Enum.Font.GothamBold
+    FPSLabel.TextSize = s(12)
+    FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-    local titleX = logoX + s(34) + s(8)
+    local PingLabel = Instance.new("TextLabel", Watermark)
+    PingLabel.Size = UDim2.new(0, s(120), 0, s(16))
+    PingLabel.Position = UDim2.new(1, -s(120), 0, s(24))
+    PingLabel.BackgroundTransparency = 1
+    PingLabel.Text = "PING: 0ms"
+    PingLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    PingLabel.Font = Enum.Font.GothamBold
+    PingLabel.TextSize = s(12)
+    PingLabel.TextXAlignment = Enum.TextXAlignment.Left
 
-    local titleMain = Instance.new("TextLabel")
-    titleMain.BackgroundTransparency = 1
-    titleMain.Position = UDim2.new(0, titleX, 0, s(6))
-    titleMain.Size = UDim2.new(1, -titleX - s(10), 0, s(22))
-    titleMain.Font = Enum.Font.GothamBlack
-    titleMain.Text = "ShadowPepper Hub NEW BOIS!"
-    titleMain.TextColor3 = THEME.Text
-    titleMain.TextSize = FONT_TITLE
-    titleMain.TextXAlignment = Enum.TextXAlignment.Left
-    titleMain.TextTruncate = Enum.TextTruncate.AtEnd
-    titleMain.ZIndex = 4
-    titleMain.Parent = topBar
+    local MainPanel = Instance.new("Frame", Gui)
+    MainPanel.Size = UDim2.new(0, s(300), 0, s(420))
+    -- Rechts mittig, aber etwas vom Rand weg
+    MainPanel.Position = UDim2.new(1, -s(340), 0.5, -s(210))
+    MainPanel.BackgroundColor3 = Color3.fromRGB(14, 10, 10)
+    MainPanel.BorderSizePixel = 0
+    MainPanel.Active = true
+    MainPanel.Draggable = true
+    Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, s(8))
+    Instance.new("UIStroke", MainPanel).Color = Color3.fromRGB(150, 30, 30)
 
-    local titleDev = Instance.new("TextLabel")
-    titleDev.BackgroundTransparency = 1
-    titleDev.Position = UDim2.new(0, titleX, 0, s(28))
-    titleDev.Size = UDim2.new(1, -titleX - s(10), 0, s(16))
-    titleDev.Font = Enum.Font.Gotham
-    titleDev.Text = "developed by schmeckt"
-    titleDev.TextColor3 = THEME.DevText
-    titleDev.TextSize = FONT_DEV
-    titleDev.TextXAlignment = Enum.TextXAlignment.Left
-    titleDev.TextTruncate = Enum.TextTruncate.AtEnd
-    titleDev.ZIndex = 4
-    titleDev.Parent = topBar
+    local PanelTitle = Instance.new("TextLabel", MainPanel)
+    PanelTitle.Size = UDim2.new(1, -s(20), 0, s(40))
+    PanelTitle.Position = UDim2.new(0, s(16), 0, 0)
+    PanelTitle.BackgroundTransparency = 1
+    PanelTitle.Text = "Features & Settings"
+    PanelTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PanelTitle.Font = Enum.Font.GothamBold
+    PanelTitle.TextSize = s(14)
+    PanelTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-    local inner = Instance.new("Frame")
-    inner.Name = "Inner"
-    inner.BackgroundColor3 = THEME.BgInner
-    inner.BorderSizePixel = 0
-    inner.Position = UDim2.new(0, PAD_MAIN, 0, TOPBAR_H + PAD_MAIN + PAD_MAIN)
-    inner.Size = UDim2.new(1, -PAD_MAIN*2, 1, -(TOPBAR_H + PAD_MAIN*3))
-    inner.ZIndex = 2
-    inner.Parent = main
-    corner(inner, CORNER_R)
-    strokeUI(inner, THEME.Stroke2, 1, 0.2)
+    local RestartBtn = Instance.new("TextButton", MainPanel)
+    RestartBtn.Size = UDim2.new(0, s(80), 0, s(24))
+    RestartBtn.Position = UDim2.new(1, -s(90), 0, s(8))
+    RestartBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+    RestartBtn.Text = "RESTART HUB"
+    RestartBtn.Font = Enum.Font.GothamBold
+    RestartBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    RestartBtn.TextSize = s(9)
+    Instance.new("UICorner", RestartBtn).CornerRadius = UDim.new(0, s(4))
 
-    local sidebar = Instance.new("Frame")
-    sidebar.BackgroundColor3 = THEME.Sidebar
-    sidebar.BorderSizePixel = 0
-    sidebar.Position = UDim2.new(0, PAD_INNER, 0, PAD_INNER)
-    sidebar.Size = UDim2.new(0, SIDEBAR_W, 1, -PAD_INNER*2)
-    sidebar.ZIndex = 3
-    sidebar.Parent = inner
-    corner(sidebar, CORNER_R)
-    strokeUI(sidebar, THEME.Stroke1, 1, 0.25)
+    RestartBtn.MouseButton1Click:Connect(function()
+        playClick()
+        SaveConfig()
+        ClearRender()
+        Gui:Destroy()
+        StopAllScripts()
+        task.wait(0.3)
+        BuildUI()
+        StartAllScripts()
+    end)
 
-    local sideInner = Instance.new("Frame")
-    sideInner.BackgroundTransparency = 1
-    sideInner.Size = UDim2.new(1, -s(16), 1, -s(16))
-    sideInner.Position = UDim2.new(0, s(8), 0, s(8))
-    sideInner.ZIndex = 4
-    sideInner.Parent = sidebar
+    local PanelDiv = Instance.new("Frame", MainPanel)
+    PanelDiv.Size = UDim2.new(1, 0, 0, math.max(1, s(1)))
+    PanelDiv.Position = UDim2.new(0, 0, 0, s(40))
+    PanelDiv.BackgroundColor3 = Color3.fromRGB(60, 15, 15)
+    PanelDiv.BorderSizePixel = 0
 
-    local tabsHeader = Instance.new("TextLabel")
-    tabsHeader.BackgroundColor3 = THEME.Card2
-    tabsHeader.Size = UDim2.new(1, 0, 0, s(28))
-    tabsHeader.Font = Enum.Font.GothamSemibold
-    tabsHeader.Text = "Tabs"
-    tabsHeader.TextColor3 = THEME.Text
-    tabsHeader.TextSize = FONT_TAB
-    tabsHeader.ZIndex = 5
-    tabsHeader.Parent = sideInner
-    corner(tabsHeader, CORNER_XS)
+    local Scroll = Instance.new("ScrollingFrame", MainPanel)
+    Scroll.Size = UDim2.new(1, 0, 1, -s(45))
+    Scroll.Position = UDim2.new(0, 0, 0, s(45))
+    Scroll.BackgroundTransparency = 1
+    Scroll.BorderSizePixel = 0
+    Scroll.ScrollBarThickness = s(2)
+    Scroll.ScrollBarImageColor3 = Color3.fromRGB(200, 40, 40)
+    Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    Instance.new("UIPadding", Scroll).PaddingTop = UDim.new(0, s(6))
+    Instance.new("UIPadding", Scroll).PaddingBottom = UDim.new(0, s(10))
 
-    local tabsContainer = Instance.new("Frame")
-    tabsContainer.BackgroundTransparency = 1
-    tabsContainer.Position = UDim2.new(0, 0, 0, s(36))
-    tabsContainer.Size = UDim2.new(1, 0, 1, -s(110))
-    tabsContainer.ZIndex = 5
-    tabsContainer.Parent = sideInner
+    local UIList = Instance.new("UIListLayout", Scroll)
+    UIList.SortOrder = Enum.SortOrder.LayoutOrder
+    UIList.Padding = UDim.new(0, s(6))
+    UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-    local listTabs = Instance.new("UIListLayout")
-    listTabs.FillDirection = Enum.FillDirection.Vertical
-    listTabs.SortOrder = Enum.SortOrder.LayoutOrder
-    listTabs.Padding = UDim.new(0, s(6))
-    listTabs.Parent = tabsContainer
+    local orderCount = 0
 
-    local profile = Instance.new("Frame")
-    profile.BackgroundColor3 = THEME.Card
-    profile.BorderSizePixel = 0
-    profile.Size = UDim2.new(1, 0, 0, s(60))
-    profile.Position = UDim2.new(0, 0, 1, -s(60))
-    profile.ZIndex = 5
-    profile.Parent = sideInner
-    corner(profile, CORNER_R)
-    strokeUI(profile, THEME.Stroke2, 1, 0.35)
+    local function CreateSection(name)
+        orderCount = orderCount + 1
+        local f = Instance.new("Frame", Scroll)
+        f.Size = UDim2.new(0.9, 0, 0, s(24))
+        f.BackgroundTransparency = 1
+        f.LayoutOrder = orderCount
 
-    local avatarImg = Instance.new("ImageLabel")
-    avatarImg.BackgroundTransparency = 1
-    avatarImg.Size = UDim2.new(0, s(40), 0, s(40))
-    avatarImg.Position = UDim2.new(0, s(10), 0.5, -s(20))
-    avatarImg.ZIndex = 6
-    avatarImg.Parent = profile
-    corner(avatarImg, CORNER_PILL)
+        local l = Instance.new("TextLabel", f)
+        l.Size = UDim2.new(1, -s(10), 1, 0)
+        l.Position = UDim2.new(0, s(10), 0, 0)
+        l.BackgroundTransparency = 1
+        l.Text = string.upper(name)
+        l.TextColor3 = Color3.fromRGB(255, 80, 80)
+        l.Font = Enum.Font.GothamBold
+        l.TextSize = s(11)
+        l.TextXAlignment = Enum.TextXAlignment.Left
 
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Position = UDim2.new(0, s(58), 0, s(10))
-    nameLabel.Size = UDim2.new(1, -s(66), 0, s(18))
-    nameLabel.Font = Enum.Font.GothamSemibold
-    nameLabel.TextColor3 = THEME.Text
-    nameLabel.TextSize = FONT_SMALL
-    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
-    nameLabel.TextTruncate = Enum.TextTruncate.AtEnd
-    nameLabel.ZIndex = 6
-    nameLabel.Parent = profile
-
-    local subLabel = Instance.new("TextLabel")
-    subLabel.BackgroundTransparency = 1
-    subLabel.Position = UDim2.new(0, s(58), 0, s(30))
-    subLabel.Size = UDim2.new(1, -s(66), 0, s(16))
-    subLabel.Font = Enum.Font.Gotham
-    subLabel.TextColor3 = THEME.SubText
-    subLabel.TextSize = s(12)
-    subLabel.TextXAlignment = Enum.TextXAlignment.Left
-    subLabel.TextTruncate = Enum.TextTruncate.AtEnd
-    subLabel.ZIndex = 6
-    subLabel.Parent = profile
-
-    if lp then
-        nameLabel.Text = lp.DisplayName or lp.Name
-        subLabel.Text = "@" .. lp.Name
-        task.spawn(function()
-            local ok, img = pcall(function()
-                return Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
-            end)
-            if ok and img then avatarImg.Image = img end
-        end)
+        local div = Instance.new("Frame", f)
+        div.Size = UDim2.new(0, s(3), 0, s(12))
+        div.Position = UDim2.new(0, 0, 0.5, -s(6))
+        div.BackgroundColor3 = Color3.fromRGB(255, 60, 60)
+        Instance.new("UICorner", div).CornerRadius = UDim.new(1, 0)
     end
 
-    local contentX = SIDEBAR_W + PAD_INNER + PAD_INNER
-    local contentFrame = Instance.new("Frame")
-    contentFrame.Name = "Content"
-    contentFrame.BackgroundColor3 = THEME.Content
-    contentFrame.BorderSizePixel = 0
-    contentFrame.Position = UDim2.new(0, contentX, 0, PAD_INNER)
-    contentFrame.Size = UDim2.new(1, -(contentX + PAD_INNER), 1, -PAD_INNER*2)
-    contentFrame.ZIndex = 3
-    contentFrame.ClipsDescendants = true
-    contentFrame.Parent = inner
-    corner(contentFrame, CORNER_R)
-    strokeUI(contentFrame, THEME.Stroke1, 1, 0.25)
+    local function CreateToggle(name, stateVar, cb)
+        orderCount = orderCount + 1
+        local h = Instance.new("Frame", Scroll)
+        h.Size = UDim2.new(0.9, 0, 0, s(36))
+        h.BackgroundColor3 = Color3.fromRGB(20, 14, 14)
+        h.LayoutOrder = orderCount
+        Instance.new("UICorner", h).CornerRadius = UDim.new(0, s(6))
+        Instance.new("UIStroke", h).Color = Color3.fromRGB(50, 20, 20)
 
-    local function createSectionHeader(parent, text, order)
-        local hdr = Instance.new("TextLabel")
-        hdr.BackgroundColor3 = THEME.SectionBg
-        hdr.BorderSizePixel = 0
-        hdr.Size = UDim2.new(1, 0, 0, s(30))
-        hdr.Font = Enum.Font.GothamBold
-        hdr.Text = "  " .. text
-        hdr.TextColor3 = THEME.DimText
-        hdr.TextSize = FONT_SMALL
-        hdr.TextXAlignment = Enum.TextXAlignment.Left
-        hdr.ZIndex = 5
-        hdr.LayoutOrder = order or 0
-        hdr.Parent = parent
-        corner(hdr, s(8))
-        return hdr
-    end
+        local l = Instance.new("TextLabel", h)
+        l.Size = UDim2.new(0.65, 0, 1, 0)
+        l.Position = UDim2.new(0, s(12), 0, 0)
+        l.BackgroundTransparency = 1
+        l.Text = name
+        l.Font = Enum.Font.GothamSemibold
+        l.TextSize = s(13)
+        l.TextColor3 = Shared[stateVar] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 120, 120)
+        l.TextXAlignment = Enum.TextXAlignment.Left
 
-    local function createToggleRow(parent, text, order, defaultState, callback)
-        local row = Instance.new("Frame")
-        row.BackgroundColor3 = THEME.Card
-        row.BorderSizePixel = 0
-        row.Size = UDim2.new(1, 0, 0, ROW_H)
-        row.ZIndex = 4
-        row.LayoutOrder = order or 0
-        row.Parent = parent
-        corner(row, CORNER_SM)
-        strokeUI(row, THEME.Stroke2, 1, 0.4)
+        local bg = Instance.new("Frame", h)
+        bg.Size = UDim2.new(0, s(40), 0, s(20))
+        bg.Position = UDim2.new(1, -s(50), 0.5, -s(10))
+        bg.BackgroundColor3 = Shared[stateVar] and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(40, 20, 20)
+        Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
 
-        local label = Instance.new("TextLabel")
-        label.BackgroundTransparency = 1
-        label.Position = UDim2.new(0, s(16), 0, 0)
-        label.Size = UDim2.new(1, -(TOGGLE_W + s(30)), 1, 0)
-        label.Font = Enum.Font.GothamSemibold
-        label.Text = text
-        label.TextColor3 = THEME.Text
-        label.TextSize = FONT_LABEL
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.TextTruncate = Enum.TextTruncate.AtEnd
-        label.ZIndex = 5
-        label.Parent = row
+        local c = Instance.new("Frame", bg)
+        c.Size = UDim2.new(0, s(14), 0, s(14))
+        c.Position = Shared[stateVar] and UDim2.new(0, s(23), 0.5, -s(7)) or UDim2.new(0, s(3), 0.5, -s(7))
+        c.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        Instance.new("UICorner", c).CornerRadius = UDim.new(1, 0)
 
-        local pill = Instance.new("TextButton")
-        pill.AutoButtonColor = false
-        pill.AnchorPoint = Vector2.new(1, 0.5)
-        pill.Position = UDim2.new(1, -s(12), 0.5, 0)
-        pill.Size = UDim2.new(0, TOGGLE_W, 0, TOGGLE_H)
-        pill.Font = Enum.Font.GothamBold
-        pill.TextSize = s(13)
-        pill.TextColor3 = THEME.Text
-        pill.ZIndex = 6
-        pill.Parent = row
-        corner(pill, CORNER_PILL)
-
-        local state = defaultState and true or false
-        local function refresh()
-            pill.BackgroundColor3 = state and THEME.ToggleOn or THEME.ToggleOff
-            pill.Text = state and "ON" or "OFF"
-        end
-        refresh()
-
-        pill.MouseButton1Click:Connect(function()
-            playClick()
-            state = not state
-            refresh()
-            if callback then task.spawn(function() callback(state) end) end
-            Shared.SaveConfig()
-        end)
-
-        local api = {}
-        function api.Set(v) state = v and true or false; refresh() end
-        function api.Get() return state end
-        return api
-    end
-
-    local function createButtonRow(parent, text, order, callback)
-        local row = Instance.new("Frame")
-        row.BackgroundColor3 = THEME.Card
-        row.BorderSizePixel = 0
-        row.Size = UDim2.new(1, 0, 0, ROW_H)
-        row.ZIndex = 4
-        row.LayoutOrder = order or 0
-        row.Parent = parent
-        corner(row, CORNER_SM)
-        strokeUI(row, THEME.Stroke2, 1, 0.4)
-
-        local label = Instance.new("TextLabel")
-        label.BackgroundTransparency = 1
-        label.Position = UDim2.new(0, s(16), 0, 0)
-        label.Size = UDim2.new(1, -(TOGGLE_W + s(30)), 1, 0)
-        label.Font = Enum.Font.GothamSemibold
-        label.Text = text
-        label.TextColor3 = THEME.Text
-        label.TextSize = FONT_LABEL
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.TextTruncate = Enum.TextTruncate.AtEnd
-        label.ZIndex = 5
-        label.Parent = row
-
-        local btn = Instance.new("TextButton")
-        btn.AutoButtonColor = false
-        btn.AnchorPoint = Vector2.new(1, 0.5)
-        btn.Position = UDim2.new(1, -s(12), 0.5, 0)
-        btn.Size = UDim2.new(0, TOGGLE_W, 0, TOGGLE_H)
-        btn.BackgroundColor3 = THEME.TabIdle
-        btn.Font = Enum.Font.GothamBold
-        btn.Text = "RUN"
-        btn.TextSize = s(12)
-        btn.TextColor3 = THEME.Text
-        btn.ZIndex = 6
-        btn.Parent = row
-        corner(btn, CORNER_PILL)
-        strokeUI(btn, THEME.Stroke2, 1, 0.5)
+        local btn = Instance.new("TextButton", h)
+        btn.Size = UDim2.new(1, 0, 1, 0)
+        btn.BackgroundTransparency = 1
+        btn.Text = ""
 
         btn.MouseButton1Click:Connect(function()
             playClick()
-            TweenService:Create(btn, TweenInfo.new(0.1), {BackgroundColor3 = THEME.ToggleOn}):Play()
-            task.wait(0.12)
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = THEME.TabIdle}):Play()
-            if callback then callback() end
+            Shared[stateVar] = not Shared[stateVar]
+            local st = Shared[stateVar]
+            
+            TweenService:Create(c, TweenInfo.new(0.2), {Position = st and UDim2.new(0, s(23), 0.5, -s(7)) or UDim2.new(0, s(3), 0.5, -s(7))}):Play()
+            TweenService:Create(bg, TweenInfo.new(0.2), {BackgroundColor3 = st and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(40, 20, 20)}):Play()
+            TweenService:Create(l, TweenInfo.new(0.2), {TextColor3 = st and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 120, 120)}):Play()
+            
+            if cb then cb(st) end
+            SaveConfig()
         end)
+        
+        return {Label = l}
     end
 
-    local function createWarnLabel(parent, order)
-        local wl = Instance.new("TextLabel")
-        wl.BackgroundColor3 = THEME.Card
-        wl.BackgroundTransparency = 0
-        wl.Size = UDim2.new(1, 0, 0, s(24))
-        wl.Font = Enum.Font.GothamBold
-        wl.TextColor3 = THEME.Warn
-        wl.TextSize = FONT_SMALL
-        wl.Text = ""
-        wl.Visible = false
-        wl.ZIndex = 5
-        wl.LayoutOrder = order or 0
-        wl.Parent = parent
-        corner(wl, s(8))
-        return wl
-    end
+    CreateSection("Platform")
 
-    local function createTabPage(titleText)
-        local page = Instance.new("ScrollingFrame")
-        page.BackgroundTransparency = 1
-        page.Size = UDim2.new(1, 0, 1, 0)
-        page.Visible = false
-        page.ZIndex = 3
-        page.ScrollBarThickness = s(3)
-        page.ScrollBarImageColor3 = THEME.Stroke1
-        page.CanvasSize = UDim2.new(0, 0, 0, 0)
-        page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        page.Parent = contentFrame
+    orderCount = orderCount + 1
+    local PlatformRow = Instance.new("Frame", Scroll)
+    PlatformRow.Size = UDim2.new(0.9, 0, 0, s(32))
+    PlatformRow.BackgroundColor3 = Color3.fromRGB(20, 14, 14)
+    PlatformRow.LayoutOrder = orderCount
+    Instance.new("UICorner", PlatformRow).CornerRadius = UDim.new(0, s(6))
+    Instance.new("UIStroke", PlatformRow).Color = Color3.fromRGB(50, 20, 20)
 
-        pad(page, PAD_CONTENT, PAD_CONTENT, PAD_CONTENT, PAD_CONTENT)
+    local platBtns = {}
+    local platOpts = {"PC", "Mobile"}
+    local updateMethods
+    local CamlockToggleRef 
 
-        local layout = Instance.new("UIListLayout")
-        layout.FillDirection = Enum.FillDirection.Vertical
-        layout.SortOrder = Enum.SortOrder.LayoutOrder
-        layout.Padding = UDim.new(0, s(8))
-        layout.Parent = page
+    for i, opt in ipairs(platOpts) do
+        local b = Instance.new("TextButton", PlatformRow)
+        b.Size = UDim2.new(0.5, 0, 1, 0)
+        b.Position = UDim2.new(0.5 * (i - 1), 0, 0, 0)
+        b.BackgroundColor3 = Shared.Platform == opt and Color3.fromRGB(150, 30, 30) or Color3.fromRGB(20, 14, 14)
+        b.Text = opt
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = s(11)
+        b.TextColor3 = Shared.Platform == opt and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 120, 120)
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, s(6))
+        table.insert(platBtns, b)
 
-        local header = Instance.new("TextLabel")
-        header.BackgroundColor3 = THEME.Card2
-        header.BorderSizePixel = 0
-        header.Size = UDim2.new(1, 0, 0, s(38))
-        header.Font = Enum.Font.GothamBold
-        header.Text = "  " .. titleText
-        header.TextColor3 = THEME.Text
-        header.TextSize = FONT_LABEL
-        header.TextXAlignment = Enum.TextXAlignment.Left
-        header.ZIndex = 4
-        header.LayoutOrder = 0
-        header.Parent = page
-        corner(header, CORNER_SM)
-        strokeUI(header, THEME.Stroke2, 1, 0.35)
-
-        return page
-    end
-
-    local function createEmptyTabPage()
-        local page = Instance.new("ScrollingFrame")
-        page.BackgroundTransparency = 1
-        page.Size = UDim2.new(1, 0, 1, 0)
-        page.Visible = false
-        page.ZIndex = 3
-        page.ScrollBarThickness = s(3)
-        page.ScrollBarImageColor3 = THEME.Stroke1
-        page.CanvasSize = UDim2.new(0, 0, 0, 0)
-        page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        page.Parent = contentFrame
-        return page
-    end
-
-    local tabs = {
-        { id = "Replication", text = "Replication" },
-        { id = "Hitters",     text = "Hitters" },
-        { id = "Visuals",     text = "Visuals" },
-        { id = "Target",      text = "Target" },
-        { id = "Helper",      text = "Helper" },
-        { id = "Settings",    text = "Settings" },
-    }
-
-    local tabButtons = {}
-    local tabPages = {}
-
-    for i, t in ipairs(tabs) do
-        local btn = Instance.new("TextButton")
-        btn.Name = t.id .. "_Tab"
-        btn.BackgroundColor3 = THEME.TabIdle
-        btn.BorderSizePixel = 0
-        btn.Size = UDim2.new(1, 0, 0, TAB_H)
-        btn.Font = Enum.Font.GothamSemibold
-        btn.Text = "  " .. t.text
-        btn.TextColor3 = THEME.Text
-        btn.TextSize = FONT_TAB
-        btn.TextXAlignment = Enum.TextXAlignment.Left
-        btn.LayoutOrder = i
-        btn.ZIndex = 5
-        btn.Parent = tabsContainer
-        corner(btn, CORNER_SM)
-        tabButtons[t.id] = btn
-        if t.id == "Target" then
-            tabPages[t.id] = createEmptyTabPage()
-            Shared.TargetTabContainer = tabPages[t.id]
-        elseif t.id == "Visuals" then
-            tabPages[t.id] = createEmptyTabPage()
-            Shared.VisualsTabContainer = tabPages[t.id]
-        else
-            tabPages[t.id] = createTabPage(t.text)
-        end
-    end
-
-    do
-        local p = tabPages["Replication"]
-        local sVer = Instance.new("TextLabel")
-        sVer.BackgroundColor3 = THEME.Card
-        sVer.Size = UDim2.new(1, 0, 0, ROW_H)
-        sVer.Font = Enum.Font.GothamSemibold
-        sVer.TextColor3 = THEME.Text
-        sVer.TextSize = FONT_SMALL
-        sVer.ZIndex = 4
-        sVer.LayoutOrder = 1
-        sVer.Parent = p
-        corner(sVer, CORNER_SM)
-        strokeUI(sVer, THEME.Stroke2, 1, 0.35)
-
-        local platformInfo = Instance.new("TextLabel")
-        platformInfo.BackgroundColor3 = THEME.Card
-        platformInfo.Size = UDim2.new(1, 0, 0, ROW_H)
-        platformInfo.Font = Enum.Font.GothamSemibold
-        platformInfo.TextColor3 = THEME.SubText
-        platformInfo.TextSize = FONT_SMALL
-        platformInfo.Text = "  Platform: " .. Shared.Platform
-        platformInfo.ZIndex = 4
-        platformInfo.LayoutOrder = 2
-        platformInfo.Parent = p
-        corner(platformInfo, CORNER_SM)
-        strokeUI(platformInfo, THEME.Stroke2, 1, 0.4)
-
-        task.spawn(function()
-            while p.Parent do
-                local ping = 0
-                pcall(function() ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
-                sVer.Text = "  Server v" .. game.PlaceVersion .. "  |  Ping: " .. ping .. "ms  |  Runs: " .. Shared.TotalExecutions
-                task.wait(1)
+        b.MouseButton1Click:Connect(function()
+            playClick()
+            Shared.Platform = opt
+            for idx, ob in ipairs(platBtns) do
+                ob.BackgroundColor3 = platOpts[idx] == opt and Color3.fromRGB(150, 30, 30) or Color3.fromRGB(20, 14, 14)
+                ob.TextColor3 = platOpts[idx] == opt and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 120, 120)
             end
+            SaveConfig()
+            if updateMethods then updateMethods() end
+            if CamlockToggleRef then 
+                CamlockToggleRef.Label.Text = Shared.Platform == "PC" and "Camlock (Q)" or "Camlock"
+            end
+            if Shared.SilentAim then Load_SilentMethod() end
+            if Shared.Camlock then Load_CamlockMethod() end
         end)
     end
 
-    do
-        local p = tabPages["Hitters"]
-        createSectionHeader(p, "SILENT AIM", 1)
+    CreateSection("Silent Aim")
 
-        local aimWarn = createWarnLabel(p, 2)
+    orderCount = orderCount + 1
+    local MethodRow = Instance.new("Frame", Scroll)
+    MethodRow.Size = UDim2.new(0.9, 0, 0, s(32))
+    MethodRow.BackgroundColor3 = Color3.fromRGB(20, 14, 14)
+    MethodRow.LayoutOrder = orderCount
+    Instance.new("UICorner", MethodRow).CornerRadius = UDim.new(0, s(6))
+    Instance.new("UIStroke", MethodRow).Color = Color3.fromRGB(50, 20, 20)
 
-        local function FlashAimWarn(txt)
-            aimWarn.Text = "  " .. txt
-            aimWarn.Visible = true
-            task.delay(2.5, function() if aimWarn and aimWarn.Parent then aimWarn.Visible = false end end)
-        end
-
-        local AimSwitch
-        AimSwitch = createToggleRow(p, "Silent Aim", 3, Shared.SilentAim, function(on)
-            if on then
-                if not Shared.SilentAimMethod then
-                    FlashAimWarn("Select a method below first!")
-                    Shared.SilentAim = false
-                    AimSwitch.Set(false)
-                    return
-                end
-                if Shared.Platform == "PC" and Shared.SilentAimMethod == "MobileMethod" then
-                    FlashAimWarn("Mobile Method not available on PC!")
-                    Shared.SilentAim = false
-                    AimSwitch.Set(false)
-                    return
-                end
-                if Shared.Platform == "Mobile" and (Shared.SilentAimMethod == "FOV" or Shared.SilentAimMethod == "QMethod") then
-                    FlashAimWarn("PC Method not available on Mobile!")
-                    Shared.SilentAim = false
-                    AimSwitch.Set(false)
-                    return
-                end
-                EnableSilentAimFlags()
-                Load_SilentAim_ByMethod()
-            else
-                Stop_SilentAim_All()
-            end
-        end)
-
-        createSectionHeader(p, "SELECT METHOD", 4)
-
-        local isPCMode = Shared.Platform == "PC"
-
-        local methodRow = Instance.new("Frame")
-        methodRow.BackgroundColor3 = THEME.SectionBg
-        methodRow.BorderSizePixel = 0
-        methodRow.Size = UDim2.new(1, 0, 0, s(50))
-        methodRow.ZIndex = 4
-        methodRow.LayoutOrder = 5
-        methodRow.Parent = p
-        corner(methodRow, CORNER_SM)
-
-        local selectedMethodId = Shared.SilentAimMethod
-
-        local methodBtns = {}
-        local methodStrokes = {}
-
-        local methodList
-        if isPCMode then
-            methodList = {
-                {id = "FOV", label = "FOV Method"},
-                {id = "QMethod", label = "Q Method"},
-            }
+    updateMethods = function()
+        for _, c in ipairs(MethodRow:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+        
+        local opts = {}
+        if Shared.Platform == "PC" then
+            opts = { {id="QMethod", txt="Q-Method"}, {id="FOV", txt="FOV Method"} }
+            if Shared.SilentAimMethod == "MobileMethod" then Shared.SilentAimMethod = "QMethod" end
         else
-            methodList = {
-                {id = "MobileMethod", label = "Mobile Method"},
-            }
+            opts = { {id="MobileMethod", txt="Mobile Method"} }
+            Shared.SilentAimMethod = "MobileMethod"
         end
-
-        local btnCount = #methodList
-        local btnW = math.floor((1 / btnCount) * 100) / 100
-
-        for i, m in ipairs(methodList) do
-            local b = Instance.new("TextButton")
-            b.Name = "Method_" .. m.id
-            b.AutoButtonColor = false
-            b.Size = UDim2.new(btnW, -s(12), 0, s(36))
-            b.Position = UDim2.new(btnW * (i - 1), s(6), 0.5, -s(18))
+        
+        local w = 1 / #opts
+        local mBtns = {}
+        for i, opt in ipairs(opts) do
+            local b = Instance.new("TextButton", MethodRow)
+            b.Size = UDim2.new(w, 0, 1, 0)
+            b.Position = UDim2.new(w * (i - 1), 0, 0, 0)
+            b.BackgroundColor3 = Shared.SilentAimMethod == opt.id and Color3.fromRGB(150, 30, 30) or Color3.fromRGB(20, 14, 14)
+            b.Text = opt.txt
             b.Font = Enum.Font.GothamBold
-            b.Text = m.label
-            b.TextSize = FONT_METHOD
-            b.ZIndex = 6
-            b.Parent = methodRow
-            corner(b, CORNER_XS)
+            b.TextSize = s(11)
+            b.TextColor3 = Shared.SilentAimMethod == opt.id and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 120, 120)
+            Instance.new("UICorner", b).CornerRadius = UDim.new(0, s(6))
+            table.insert(mBtns, {btn=b, id=opt.id})
 
-            local bStroke = strokeUI(b, COL_STROKE_OFF, s(2), 0)
-            methodBtns[m.id] = b
-            methodStrokes[m.id] = bStroke
-
-            if m.id == selectedMethodId then
-                b.BackgroundColor3 = COL_ON
-                b.TextColor3 = COL_TEXT_ON
-                bStroke.Color = COL_STROKE_ON
-            else
-                b.BackgroundColor3 = COL_OFF
-                b.TextColor3 = COL_TEXT_OFF
-                bStroke.Color = COL_STROKE_OFF
-            end
-        end
-
-        local function updateMethodVisuals(activeId)
-            for id, b in pairs(methodBtns) do
-                local isOn = (id == activeId)
-                b.BackgroundColor3 = isOn and COL_ON or COL_OFF
-                b.TextColor3 = isOn and COL_TEXT_ON or COL_TEXT_OFF
-                if methodStrokes[id] then
-                    methodStrokes[id].Color = isOn and COL_STROKE_ON or COL_STROKE_OFF
-                end
-            end
-        end
-
-        for i, m in ipairs(methodList) do
-            methodBtns[m.id].MouseButton1Click:Connect(function()
+            b.MouseButton1Click:Connect(function()
                 playClick()
-                if Shared.SilentAimMethod == m.id then return end
-                local wasOn = Shared.SilentAim
-                if wasOn then
-                    CleanupSilentAim()
-                    task.wait(0.15)
+                Shared.SilentAimMethod = opt.id
+                for _, ob in ipairs(mBtns) do
+                    local st = (ob.id == opt.id)
+                    ob.btn.BackgroundColor3 = st and Color3.fromRGB(150, 30, 30) or Color3.fromRGB(20, 14, 14)
+                    ob.btn.TextColor3 = st and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 120, 120)
                 end
-                Shared.SilentAimMethod = m.id
-                selectedMethodId = m.id
-                updateMethodVisuals(m.id)
-                Shared.SaveConfig()
-                if wasOn then
-                    Shared.SilentAim = true
-                    EnableSilentAimFlags()
-                    Load_SilentAim_ByMethod()
-                end
+                SaveConfig()
+                if Shared.SilentAim then Load_SilentMethod() end
             end)
         end
-
-        createSectionHeader(p, "AIMING", 10)
-
-        createToggleRow(p, "Camlock", 11, Shared.Camlock, function(on)
-            Shared.Camlock = on
-            if on then
-                if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
-            else
-                Stop_Camlock_PC()
-                Stop_Camlock_Mobile()
-            end
-        end)
-
-        createToggleRow(p, "TriggerBot", 12, Shared.TriggerBot, function(on)
-            Shared.TriggerBot = on
-            if on then Load_TriggerBot() end
-        end)
-
-        createSectionHeader(p, "COMBAT", 20)
-
-        createToggleRow(p, "Drag Shoot", 21, Shared.DragShoot, function(on)
-            Shared.DragShoot = on
-            if on then Load_DragShoot() end
-        end)
     end
+    updateMethods()
 
-    do
-        local p = tabPages["Helper"]
-        createSectionHeader(p, "AUTOMATION", 1)
+    CreateToggle("Enable Silent Aim", "SilentAim", function(st) Load_SilentMethod() end)
 
-        createToggleRow(p, "Auto Armor", 2, Shared.AutoArmor, function(on)
-            Shared.AutoArmor = on
-            if on then Load_AutoArmor() end
-        end)
-        createToggleRow(p, "Auto Reload", 3, Shared.AutoReload, function(on)
-            Shared.AutoReload = on
-            if on then Load_AutoReload_S() end
-        end)
+    CreateSection("Aiming & Combat")
+    CamlockToggleRef = CreateToggle(Shared.Platform == "PC" and "Camlock (Q)" or "Camlock", "Camlock", function(st) Load_CamlockMethod() end)
+    CreateToggle("Trigger Bot", "TriggerBot", function(st) if st then Load_TriggerBot() end end)
+    CreateToggle("Drag Shoot", "DragShoot", function(st) if st then Load_DragShoot() end end)
+    CreateToggle("Instant Stomp", "InstantStomp", function(st) if st then Load_InstantStomp() else Stop_Generic("Schmeckt_InstantStomp_UI", "InstantStompGui") end end)
+    CreateToggle("Anti Fling", "AntiFling", function(st) if st then Load_AntiFling() end end)
 
-        createSectionHeader(p, "PROTECTION", 10)
+    CreateSection("Visuals")
+    CreateToggle("Target Panel", "TargetPanel", function(st) if st then Load_Target() else Stop_TargetPanel() end end)
+    CreateToggle("Visuals & ESP", "VisualPanel", function(st) if st then Load_VisualPanel() else Stop_VisualPanel() end end)
 
-        createToggleRow(p, "Anti Fling", 11, Shared.AntiFling, function(on)
-            Shared.AntiFling = on
-            if on then Load_AntiFling() end
-        end)
-        createToggleRow(p, "Instant Stomp", 12, Shared.InstantStomp, function(on)
-            Shared.InstantStomp = on
-            if on then Load_InstantStomp() else Stop_InstantStomp() end
-        end)
+    CreateSection("Automation")
+    CreateToggle("Auto Armor", "AutoArmor", function(st) if st then Load_AutoArmor() end end)
+    CreateToggle("Auto Reload", "AutoReload", function(st) if st then Load_AutoReload() end end)
 
-        createSectionHeader(p, "PANELS", 20)
+    CreateSection("Misc")
+    CreateToggle("Player Panel", "PlayerPanel", function(st) if st then Load_PlayerPanel() else Stop_Generic("SchmecktPlayerPanel") end end)
+    CreateToggle("Purchase Panel", "PurchasePanel", function(st) if st then Load_PurchasePanel() else Stop_Generic("SchmecktPurchasePanel") end end)
+    CreateToggle("Staff Notifier", "StaffNotifier", function(st) if st then Load_StaffNotifier() else Stop_Generic("StaffNotifierGui") Stop_Generic("StaffListGui") end end)
 
-        createToggleRow(p, "Player Panel", 21, Shared.PlayerPanel, function(on)
-            Shared.PlayerPanel = on
-            if on then Load_PlayerPanel() else Stop_PlayerPanel() end
-        end)
-
-        createToggleRow(p, "Purchase Panel", 22, Shared.PurchasePanel, function(on)
-            Shared.PurchasePanel = on
-            if on then Load_PurchasePanel() else Stop_PurchasePanel() end
-        end)
-        createToggleRow(p, "Staff Notifier", 23, Shared.StaffNotifier, function(on)
-            Shared.StaffNotifier = on
-            if on then Load_StaffNotifier() else Stop_StaffNotifier() end
-        end)
-    end
-
-    do
-        local p = tabPages["Settings"]
-        createSectionHeader(p, "SCRIPT CONTROL", 1)
-
-        createButtonRow(p, "Restart Script", 2, function()
-            Shared.SaveConfig()
-            gui:Destroy()
-            ReloadAllScripts()
-            task.wait(0.3)
-            CreateUI()
-            task.wait(0.2)
-            Load_Target()
-            Load_Visual()
-        end)
-        createButtonRow(p, "Unload / Close", 3, function()
-            DisableAllScripts()
-            Shared.SaveConfig()
-            gui:Destroy()
-        end)
-
-        createSectionHeader(p, "PLATFORM", 10)
-
-        local platWarn = createWarnLabel(p, 11)
-
-        createButtonRow(p, "Switch to PC", 12, function()
-            if Shared.Platform == "PC" then return end
-            if Shared.SilentAim then Stop_SilentAim_All() end
-            Shared.SilentAimMethod = nil
-            Shared.Platform = "PC"
-            platWarn.Text = "  Switched to PC - Restart to apply"
-            platWarn.Visible = true
-            Shared.SaveConfig()
-        end)
-        createButtonRow(p, "Switch to Mobile", 13, function()
-            if Shared.Platform == "Mobile" then return end
-            if Shared.SilentAim then Stop_SilentAim_All() end
-            Shared.SilentAimMethod = nil
-            Shared.Platform = "Mobile"
-            platWarn.Text = "  Switched to Mobile - Restart to apply"
-            platWarn.Visible = true
-            Shared.SaveConfig()
-        end)
-    end
-
-    local currentTab = "Replication"
-    local function switchTab(id)
-        if id == currentTab then return end
-        currentTab = id
-        playClick()
-        for k, page in pairs(tabPages) do page.Visible = (k == id) end
-        for k, btn in pairs(tabButtons) do
-            TweenService:Create(btn, TweenInfo.new(0.15), {
-                BackgroundColor3 = (k == id) and THEME.TabActive or THEME.TabIdle
-            }):Play()
-        end
-    end
-
-    for id, btn in pairs(tabButtons) do
-        btn.MouseButton1Click:Connect(function() switchTab(id) end)
-    end
-    tabPages["Replication"].Visible = true
-    for k, btn in pairs(tabButtons) do
-        btn.BackgroundColor3 = (k == "Replication") and THEME.TabActive or THEME.TabIdle
-    end
-
-    do
-        local dragging, dragInput, dragStart, startPos
-        topBar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                dragStart = input.Position
-                startPos = main.Position
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then dragging = false end
-                end)
-            end
-        end)
-        topBar.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                dragInput = input
-            end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            if input == dragInput and dragging then
-                local delta = input.Position - dragStart
-                main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-            end
-        end)
-    end
-
-    local minimized = false
-    miniBtn.MouseButton1Click:Connect(function()
-        playClick()
-        minimized = not minimized
-        if minimized then
-            inner.Visible = false
-            TweenService:Create(main, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = UDim2.new(0, MAIN_W, 0, TOPBAR_H + PAD_MAIN*2 + s(4))
-            }):Play()
-        else
-            TweenService:Create(main, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
-                Size = NORMAL_SIZE
-            }):Play()
-            task.delay(0.2, function() inner.Visible = true end)
-        end
-    end)
-
-    closeBtn.MouseButton1Click:Connect(function()
-        playClick()
-        gui:Destroy()
-    end)
-
-    main.Size = UDim2.new(0, 0, 0, 0)
-    main.Rotation = -8
-    TweenService:Create(main, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = NORMAL_SIZE, Rotation = 0
-    }):Play()
+    local lastTick = tick()
+    table.insert(RenderConnections, RunService.RenderStepped:Connect(function()
+        local cTick = tick()
+        FPSLabel.Text = "FPS: " .. math.floor(1 / (cTick - lastTick))
+        lastTick = cTick
+        pcall(function() PingLabel.Text = "PING: " .. math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue()) .. "ms" end)
+    end))
 end
 
-CreateUI()
-Load_ShadowPepperUsers()
-
-task.wait(0.3)
-Load_Target()
-Load_Visual()
+BuildUI()
 
 task.defer(function()
-    if Shared.InstantStomp then Load_InstantStomp() end
-    if Shared.AutoArmor then Load_AutoArmor() end
-    if Shared.SilentAim and Shared.SilentAimMethod then
-        EnableSilentAimFlags()
-        Load_SilentAim_ByMethod()
-    end
-    if Shared.TriggerBot then Load_TriggerBot() end
-    if Shared.StaffNotifier then Load_StaffNotifier() end
-    if Shared.PlayerPanel then Load_PlayerPanel() end
-    if Shared.PurchasePanel then Load_PurchasePanel() end
-    if Shared.Camlock then
-        if Shared.Platform == "Mobile" then Load_Camlock_Mobile() else Load_Camlock() end
-    end
-    if Shared.AntiFling then Load_AntiFling() end
-    if Shared.AutoReload then Load_AutoReload_S() end
-    if Shared.DragShoot then Load_DragShoot() end
+    StartAllScripts()
 end)
