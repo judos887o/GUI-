@@ -11,6 +11,16 @@ local Stats = game:GetService("Stats")
 local HttpService = game:GetService("HttpService")
 
 local lp = Players.LocalPlayer
+
+local BlacklistedUsers = {
+    ["raphyysalt"] = true,
+}
+
+if BlacklistedUsers[string.lower(lp.Name)] then
+    lp:Kick("🛡️ ShadowPepper Hub:\nYou are permanently blacklisted from using this script.")
+    return
+end
+
 local CLICK_SOUND = "rbxassetid://100809160609628"
 local LOGO_ASSET = "rbxassetid://121759217057084"
 local CONFIG_FILE = "SchmecktHub_RedPro_Settings_" .. lp.UserId .. ".json"
@@ -345,7 +355,6 @@ local function BuildUI()
 
     local MainPanel = Instance.new("Frame", Gui)
     MainPanel.Size = UDim2.new(0, s(300), 0, s(420))
-    -- Rechts mittig, aber etwas vom Rand weg
     MainPanel.Position = UDim2.new(1, -s(340), 0.5, -s(210))
     MainPanel.BackgroundColor3 = Color3.fromRGB(14, 10, 10)
     MainPanel.BorderSizePixel = 0
