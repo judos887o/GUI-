@@ -13,8 +13,8 @@ local HttpService = game:GetService("HttpService")
 local lp = Players.LocalPlayer
 
 local BlacklistedUsers = {
-    [3856156647] = true,
-    [8663846070] = true,
+    [1] = true,
+    [1] = true,
 }
 
 if BlacklistedUsers[lp.UserId] then
