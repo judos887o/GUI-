@@ -49,8 +49,10 @@ Shared.InstantStomp = Shared.InstantStomp or false
 Shared.AntiFling = Shared.AntiFling or false
 Shared.VisualPanel = Shared.VisualPanel or false
 Shared.PurchasePanel = Shared.PurchasePanel or false
+Shared.DesyncPanel = Shared.DesyncPanel or false
+Shared.SilentPrediction = Shared.SilentPrediction or "0.135"
 Shared.Connections = Shared.Connections or {}
-Shared.TargetTabContainer = Instance.new("Folder") 
+Shared.TargetTabContainer = Instance.new("Folder")
 Shared.VisualsTabContainer = Instance.new("Folder")
 
 pcall(function()
@@ -63,14 +65,23 @@ end)
 local function SaveConfig()
     pcall(function()
         local s = {
-            Platform = Shared.Platform, SilentAimMethod = Shared.SilentAimMethod,
-            AutoArmor = Shared.AutoArmor, StaffNotifier = Shared.StaffNotifier,
-            TriggerBot = Shared.TriggerBot, Camlock = Shared.Camlock,
-            SilentAim = Shared.SilentAim, AutoReload = Shared.AutoReload,
-            PlayerPanel = Shared.PlayerPanel, DragShoot = Shared.DragShoot,
-            TargetPanel = Shared.TargetPanel, InstantStomp = Shared.InstantStomp,
-            AntiFling = Shared.AntiFling, VisualPanel = Shared.VisualPanel,
-            PurchasePanel = Shared.PurchasePanel
+            Platform = Shared.Platform,
+            SilentAimMethod = Shared.SilentAimMethod,
+            AutoArmor = Shared.AutoArmor,
+            StaffNotifier = Shared.StaffNotifier,
+            TriggerBot = Shared.TriggerBot,
+            Camlock = Shared.Camlock,
+            SilentAim = Shared.SilentAim,
+            AutoReload = Shared.AutoReload,
+            PlayerPanel = Shared.PlayerPanel,
+            DragShoot = Shared.DragShoot,
+            TargetPanel = Shared.TargetPanel,
+            InstantStomp = Shared.InstantStomp,
+            AntiFling = Shared.AntiFling,
+            VisualPanel = Shared.VisualPanel,
+            PurchasePanel = Shared.PurchasePanel,
+            DesyncPanel = Shared.DesyncPanel,
+            SilentPrediction = Shared.SilentPrediction
         }
         writefile(CONFIG_FILE, HttpService:JSONEncode(s))
     end)
@@ -88,7 +99,7 @@ end
 local function safeLoad(url)
     task.spawn(function()
         local ok, c = pcall(function() return game:HttpGet(url, true) end)
-        if ok then local f = loadstring(c); if f then pcall(f) end end
+        if ok then local f = loadstring(c) if f then pcall(f) end end
     end)
 end
 
@@ -109,6 +120,7 @@ local function Load_AntiFling() safeLoad("https://raw.githubusercontent.com/judo
 local function Load_ShadowPepperUsers() safeLoad("https://raw.githubusercontent.com/judos887o/user/refs/heads/main/a") end
 local function Load_VisualPanel() safeLoad("https://raw.githubusercontent.com/judos887o/visual-panel-/refs/heads/main/a") end
 local function Load_PurchasePanel() safeLoad("https://raw.githubusercontent.com/judos887o/purchased/refs/heads/main/a") end
+local function Load_DesyncPanel() safeLoad("https://raw.githubusercontent.com/judos887o/desync-panelwoww/refs/heads/main/sa") end
 
 local function EnableSilentAimFlags()
     Shared.SilentAim = true
@@ -116,6 +128,13 @@ local function EnableSilentAimFlags()
     getgenv().SilentAim = true
     getgenv().SchmecktSilentAim = true
     getgenv().SilentAimActive = true
+    getgenv().SilentAimPrediction = Shared.SilentPrediction
+    getgenv().SilentPrediction = Shared.SilentPrediction
+    getgenv().SchmecktPrediction = Shared.SilentPrediction
+    getgenv().SilentAimFOV = false
+    getgenv().FOVSilentAim = false
+    getgenv().SilentAimQ = false
+    getgenv().QMethodSilentAim = false
     if Shared.SilentAimMethod == "FOV" then
         getgenv().SilentAimFOV = true
         getgenv().FOVSilentAim = true
@@ -172,9 +191,13 @@ local function Load_SilentMethod()
     CleanupSilentAim()
     if not Shared.SilentAim then return end
     EnableSilentAimFlags()
-    if Shared.SilentAimMethod == "FOV" then Load_SilentAim_FOV()
-    elseif Shared.SilentAimMethod == "QMethod" then Load_Internal_Q_Method()
-    elseif Shared.SilentAimMethod == "MobileMethod" then Load_SilentAim_Mobile() end
+    if Shared.SilentAimMethod == "FOV" then
+        Load_SilentAim_FOV()
+    elseif Shared.SilentAimMethod == "QMethod" then
+        Load_Internal_Q_Method()
+    elseif Shared.SilentAimMethod == "MobileMethod" then
+        Load_SilentAim_Mobile()
+    end
 end
 
 local function Stop_Camlock()
@@ -222,6 +245,7 @@ local function StopAllScripts()
     Stop_Generic("SchmecktCamlock")
     Stop_Generic("SchmecktPlayerPanel")
     Stop_Generic("SchmecktPurchasePanel")
+    Stop_Generic("SchmecktDesyncPanel")
     Stop_Generic("Schmeckt_InstantStomp_UI", "InstantStompGui")
     if lp and lp:FindFirstChild("PlayerGui") then
         local sn = lp.PlayerGui:FindFirstChild("StaffNotifierGui") if sn then sn:Destroy() end
@@ -234,8 +258,8 @@ end
 
 local function StartAllScripts()
     Load_ShadowPepperUsers()
-    Load_Target()
-    Load_VisualPanel()
+    if Shared.TargetPanel then Load_Target() end
+    if Shared.VisualPanel then Load_VisualPanel() end
     if Shared.AutoArmor then Load_AutoArmor() end
     if Shared.SilentAim then Load_SilentMethod() end
     if Shared.Camlock then Load_CamlockMethod() end
@@ -247,6 +271,7 @@ local function StartAllScripts()
     if Shared.PlayerPanel then Load_PlayerPanel() end
     if Shared.PurchasePanel then Load_PurchasePanel() end
     if Shared.StaffNotifier then Load_StaffNotifier() end
+    if Shared.DesyncPanel then Load_DesyncPanel() end
 end
 
 local RenderConnections = {}
@@ -303,7 +328,7 @@ local function BuildUI()
     WMTitle.TextSize = s(15)
     WMTitle.TextXAlignment = Enum.TextXAlignment.Left
     WMTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    
+
     local TitleStroke = Instance.new("UIStroke", WMTitle)
     TitleStroke.Color = Color3.fromRGB(60, 0, 0)
     TitleStroke.Thickness = 1.5
@@ -355,8 +380,8 @@ local function BuildUI()
     PingLabel.TextXAlignment = Enum.TextXAlignment.Left
 
     local MainPanel = Instance.new("Frame", Gui)
-    MainPanel.Size = UDim2.new(0, s(300), 0, s(420))
-    MainPanel.Position = UDim2.new(1, -s(340), 0.5, -s(210))
+    MainPanel.Size = UDim2.new(0, s(300), 0, s(440))
+    MainPanel.Position = UDim2.new(1, -s(340), 0.5, -s(220))
     MainPanel.BackgroundColor3 = Color3.fromRGB(14, 10, 10)
     MainPanel.BorderSizePixel = 0
     MainPanel.Active = true
@@ -454,7 +479,7 @@ local function BuildUI()
         Instance.new("UIStroke", h).Color = Color3.fromRGB(50, 20, 20)
 
         local l = Instance.new("TextLabel", h)
-        l.Size = UDim2.new(0.65, 0, 1, 0)
+        l.Size = UDim2.new(0.7, 0, 1, 0)
         l.Position = UDim2.new(0, s(12), 0, 0)
         l.BackgroundTransparency = 1
         l.Text = name
@@ -484,16 +509,16 @@ local function BuildUI()
             playClick()
             Shared[stateVar] = not Shared[stateVar]
             local st = Shared[stateVar]
-            
+
             TweenService:Create(c, TweenInfo.new(0.2), {Position = st and UDim2.new(0, s(23), 0.5, -s(7)) or UDim2.new(0, s(3), 0.5, -s(7))}):Play()
             TweenService:Create(bg, TweenInfo.new(0.2), {BackgroundColor3 = st and Color3.fromRGB(200, 40, 40) or Color3.fromRGB(40, 20, 20)}):Play()
             TweenService:Create(l, TweenInfo.new(0.2), {TextColor3 = st and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 120, 120)}):Play()
-            
+
             if cb then cb(st) end
             SaveConfig()
         end)
-        
-        return {Label = l}
+
+        return {Label = l, Holder = h}
     end
 
     CreateSection("Platform")
@@ -509,7 +534,8 @@ local function BuildUI()
     local platBtns = {}
     local platOpts = {"PC", "Mobile"}
     local updateMethods
-    local CamlockToggleRef 
+    local CamlockToggleRef
+    local PredictionBox
 
     for i, opt in ipairs(platOpts) do
         local b = Instance.new("TextButton", PlatformRow)
@@ -532,7 +558,7 @@ local function BuildUI()
             end
             SaveConfig()
             if updateMethods then updateMethods() end
-            if CamlockToggleRef then 
+            if CamlockToggleRef then
                 CamlockToggleRef.Label.Text = Shared.Platform == "PC" and "Camlock (Q)" or "Camlock"
             end
             if Shared.SilentAim then Load_SilentMethod() end
@@ -552,7 +578,7 @@ local function BuildUI()
 
     updateMethods = function()
         for _, c in ipairs(MethodRow:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
-        
+
         local opts = {}
         if Shared.Platform == "PC" then
             opts = { {id="QMethod", txt="Q-Method"}, {id="FOV", txt="FOV Method"} }
@@ -561,7 +587,7 @@ local function BuildUI()
             opts = { {id="MobileMethod", txt="Mobile Method"} }
             Shared.SilentAimMethod = "MobileMethod"
         end
-        
+
         local w = 1 / #opts
         local mBtns = {}
         for i, opt in ipairs(opts) do
@@ -579,22 +605,79 @@ local function BuildUI()
             b.MouseButton1Click:Connect(function()
                 playClick()
                 Shared.SilentAimMethod = opt.id
+                SaveConfig()
+                if Shared.SilentAim then Load_SilentMethod() end
                 for _, ob in ipairs(mBtns) do
                     local st = (ob.id == opt.id)
                     ob.btn.BackgroundColor3 = st and Color3.fromRGB(150, 30, 30) or Color3.fromRGB(20, 14, 14)
                     ob.btn.TextColor3 = st and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(160, 120, 120)
                 end
-                SaveConfig()
-                if Shared.SilentAim then Load_SilentMethod() end
             end)
         end
     end
     updateMethods()
 
-    CreateToggle("Enable Silent Aim", "SilentAim", function(st) Load_SilentMethod() end)
+    CreateToggle("Enable Silent Aim", "SilentAim", function(st)
+        if st then
+            Load_SilentMethod()
+        else
+            CleanupSilentAim()
+        end
+    end)
+
+    orderCount = orderCount + 1
+    local PredFrame = Instance.new("Frame", Scroll)
+    PredFrame.Size = UDim2.new(0.9, 0, 0, s(32))
+    PredFrame.BackgroundColor3 = Color3.fromRGB(20, 14, 14)
+    PredFrame.LayoutOrder = orderCount
+    Instance.new("UICorner", PredFrame).CornerRadius = UDim.new(0, s(6))
+    Instance.new("UIStroke", PredFrame).Color = Color3.fromRGB(50, 20, 20)
+
+    local PredLabel = Instance.new("TextLabel", PredFrame)
+    PredLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    PredLabel.Position = UDim2.new(0, s(12), 0, 0)
+    PredLabel.BackgroundTransparency = 1
+    PredLabel.Text = "Prediction"
+    PredLabel.Font = Enum.Font.GothamSemibold
+    PredLabel.TextSize = s(12)
+    PredLabel.TextColor3 = Color3.fromRGB(200, 160, 160)
+    PredLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    PredictionBox = Instance.new("TextBox", PredFrame)
+    PredictionBox.Size = UDim2.new(0.35, 0, 0.7, 0)
+    PredictionBox.Position = UDim2.new(1, -s(12) - s(100), 0.15, 0)
+    PredictionBox.BackgroundColor3 = Color3.fromRGB(24, 18, 18)
+    PredictionBox.PlaceholderColor3 = Color3.fromRGB(120, 90, 90)
+    PredictionBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PredictionBox.BorderSizePixel = 0
+    PredictionBox.Font = Enum.Font.Gotham
+    PredictionBox.TextSize = s(11)
+    PredictionBox.ClearTextOnFocus = false
+    PredictionBox.TextXAlignment = Enum.TextXAlignment.Left
+    PredictionBox.Text = tostring(Shared.SilentPrediction or "0.135")
+    Instance.new("UICorner", PredictionBox).CornerRadius = UDim.new(0, s(4))
+    Instance.new("UIStroke", PredictionBox).Color = Color3.fromRGB(60, 25, 25)
+
+    PredictionBox.FocusLost:Connect(function()
+        local txt = tostring(PredictionBox.Text or ""):gsub(",", ".")
+        if txt == "" then
+            PredictionBox.Text = tostring(Shared.SilentPrediction)
+            return
+        end
+        local num = tonumber(txt)
+        if not num then
+            PredictionBox.Text = tostring(Shared.SilentPrediction)
+            return
+        end
+        Shared.SilentPrediction = tostring(num)
+        getgenv().SilentAimPrediction = Shared.SilentPrediction
+        getgenv().SilentPrediction = Shared.SilentPrediction
+        getgenv().SchmecktPrediction = Shared.SilentPrediction
+        SaveConfig()
+    end)
 
     CreateSection("Aiming & Combat")
-    CamlockToggleRef = CreateToggle(Shared.Platform == "PC" and "Camlock (Q)" or "Camlock", "Camlock", function(st) Load_CamlockMethod() end)
+    local CamlockToggleRef = CreateToggle(Shared.Platform == "PC" and "Camlock (Q)" or "Camlock", "Camlock", function(st) Load_CamlockMethod() end)
     CreateToggle("Trigger Bot", "TriggerBot", function(st) if st then Load_TriggerBot() end end)
     CreateToggle("Drag Shoot", "DragShoot", function(st) if st then Load_DragShoot() end end)
     CreateToggle("Instant Stomp", "InstantStomp", function(st) if st then Load_InstantStomp() else Stop_Generic("Schmeckt_InstantStomp_UI", "InstantStompGui") end end)
@@ -611,7 +694,16 @@ local function BuildUI()
     CreateSection("Misc")
     CreateToggle("Player Panel", "PlayerPanel", function(st) if st then Load_PlayerPanel() else Stop_Generic("SchmecktPlayerPanel") end end)
     CreateToggle("Purchase Panel", "PurchasePanel", function(st) if st then Load_PurchasePanel() else Stop_Generic("SchmecktPurchasePanel") end end)
-    CreateToggle("Staff Notifier", "StaffNotifier", function(st) if st then Load_StaffNotifier() else Stop_Generic("StaffNotifierGui") Stop_Generic("StaffListGui") end end)
+    CreateToggle("Staff Notifier (not working rn)", "StaffNotifier", function(st) if st then Load_StaffNotifier() else Stop_Generic("StaffNotifierGui") Stop_Generic("StaffListGui") end end)
+    CreateToggle("Desync Panel", "DesyncPanel", function(st)
+        if st then
+            Load_DesyncPanel()
+        else
+            if getgenv().Desync ~= nil then getgenv().Desync = false end
+            Stop_Generic("DesyncPanelGui")
+            Stop_Generic("DesyncNotifyGui")
+        end
+    end)
 
     local lastTick = tick()
     table.insert(RenderConnections, RunService.RenderStepped:Connect(function()
