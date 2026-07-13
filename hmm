@@ -694,7 +694,7 @@ local function BuildUI()
     CreateSection("Misc")
     CreateToggle("Player Panel", "PlayerPanel", function(st) if st then Load_PlayerPanel() else Stop_Generic("SchmecktPlayerPanel") end end)
     CreateToggle("Purchase Panel", "PurchasePanel", function(st) if st then Load_PurchasePanel() else Stop_Generic("SchmecktPurchasePanel") end end)
-    CreateToggle("Staff Notifier (not working rn)", "StaffNotifier", function(st) if st then Load_StaffNotifier() else Stop_Generic("StaffNotifierGui") Stop_Generic("StaffListGui") end end)
+    CreateToggle("Staff Notifier", "StaffNotifier", function(st) if st then Load_StaffNotifier() else Stop_Generic("StaffNotifierGui") Stop_Generic("StaffListGui") end end)
     CreateToggle("Desync Panel", "DesyncPanel", function(st)
         if st then
             Load_DesyncPanel()
