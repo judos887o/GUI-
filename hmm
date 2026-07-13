@@ -12,7 +12,7 @@ local HttpService = game:GetService("HttpService")
 
 local lp = Players.LocalPlayer
 
--- Jedes ausgeführte Script meldet sich als ShadowPepper-User an
+-- Unsichtbares Erkennungs-Attribut
 lp:SetAttribute("ShadowPepperUser", true)
 
 local BlacklistedUsers = {
@@ -55,7 +55,7 @@ Shared.VisualPanel = Shared.VisualPanel or false
 Shared.PurchasePanel = Shared.PurchasePanel or false
 Shared.DesyncPanel = Shared.DesyncPanel or false
 Shared.AdminPanel = Shared.AdminPanel or false
-Shared.IsPrivate = Shared.IsPrivate or false -- Standardmäßig Public (False)
+Shared.IsPrivate = Shared.IsPrivate or false -- Schaltet sich mit dem Code frei
 Shared.SilentPrediction = Shared.SilentPrediction or "0.135"
 Shared.Connections = Shared.Connections or {}
 Shared.TargetTabContainer = Instance.new("Folder")
@@ -88,7 +88,7 @@ local function SaveConfig()
             PurchasePanel = Shared.PurchasePanel,
             DesyncPanel = Shared.DesyncPanel,
             AdminPanel = Shared.AdminPanel,
-            IsPrivate = Shared.IsPrivate, -- Speichert den Freischalt-Status
+            IsPrivate = Shared.IsPrivate,
             SilentPrediction = Shared.SilentPrediction
         }
         writefile(CONFIG_FILE, HttpService:JSONEncode(s))
@@ -105,106 +105,54 @@ local function playClick()
 end
 
 ----------------------------------------------------
--- LAUTLOSE VERBINDUNG & AUSFÜHRUNG (FÜR JEDEN USER)
+-- NETZWERK & COVERT CHAT SYSTEM (STUMMGESCHALTET)
 ----------------------------------------------------
+local BEACON_KEY = "\u{200B}\u{200C}\u{200D}\u{200B}" 
+
+-- Vollständig deaktiviert, um Chat-Entdeckungen auszuschließen
 local function sendChat(msg)
+    -- Tut nichts mehr, um absolute Anonymität im Server zu gewährleisten.
+end
+
+-- Versteckt feindliche Befehle im lokalen Chatfenster
+local function cleanLocalChatUI()
     pcall(function()
-        local TextChatService = game:GetService("TextChatService")
-        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
-            local channel = TextChatService.TextChannels.RBXGeneral
-            if channel then channel:SendAsync(msg) end
-        else
-            local sayMsgReq = game:GetService("ReplicatedStorage"):FindFirstChild("DefaultChatSystemChatEvents")
-                and game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
-            if sayMsgReq then
-                sayMsgReq:FireServer(msg, "All")
-            else
-                Players:Chat(msg)
+        local chatGui = lp.PlayerGui:FindFirstChild("Chat")
+        local msgDisplay = chatGui and chatGui:FindFirstChild("Frame") 
+            and chatGui.Frame:FindFirstChild("ChatChannelParentFrame")
+            and chatGui.Frame.ChatChannelParentFrame:FindFirstChild("Frame_MessageLogDisplay")
+            and chatGui.Frame.ChatChannelParentFrame.Frame_MessageLogDisplay:FindFirstChild("Scroller")
+        
+        if msgDisplay then
+            for _, child in ipairs(msgDisplay:GetChildren()) do
+                if child:IsA("Frame") then
+                    local label = child:FindFirstChildWhichIsA("TextLabel", true)
+                    if label and (label.Text:find("%[SP_") or label.Text:find(BEACON_KEY)) then
+                        child.Visible = false
+                        child.Size = UDim2.new(0, 0, 0, 0)
+                    end
+                end
             end
         end
     end)
 end
+RunService.Heartbeat:Connect(cleanLocalChatUI)
 
-local isFrozen = false
-local isJailed = false
-local jailLoopConnection = nil
-local jailPosition = Vector3.new(0, -500, 0)
-
-local function handleRemoteCommand(cmd, targetId)
-    if tostring(targetId) ~= tostring(lp.UserId) then return end
-
-    if cmd == "freeze" then
-        isFrozen = true
-        local char = lp.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.Anchored = true end
-        
-    elseif cmd == "unfreeze" then
-        isFrozen = false
-        local char = lp.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.Anchored = false end
-        
-    elseif cmd == "kill" then
-        local char = lp.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hrp and hum then
-            hrp.CFrame = CFrame.new(0, -9999, 0)
-            hrp.AssemblyLinearVelocity = Vector3.new(0, -5000, 0)
-            task.wait(0.1)
-            hum.Health = 0
+-- Stealth-Filter für neues Roblox TextChatService (eingehende Nachrichten verbergen)
+pcall(function()
+    local TextChatService = game:GetService("TextChatService")
+    TextChatService.OnIncomingMessage = function(message)
+        if message.Text:find("%[SP_") or message.Text:find(BEACON_KEY) then
+            local properties = Instance.new("TextChatMessageProperties")
+            properties.Text = ""
+            return properties
         end
-        
-    elseif cmd == "jail" then
-        isJailed = true
-        if jailLoopConnection then jailLoopConnection:Disconnect() end
-        
-        local cage = Workspace:FindFirstChild("LocalJailCage")
-        if not cage then
-            cage = Instance.new("Part")
-            cage.Name = "LocalJailCage"
-            cage.Size = Vector3.new(15, 1, 15)
-            cage.Position = jailPosition - Vector3.new(0, 2, 0)
-            cage.Anchored = true
-            cage.Parent = Workspace
-        end
-
-        jailLoopConnection = RunService.Heartbeat:Connect(function()
-            local char = lp.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp and isJailed then
-                hrp.CFrame = CFrame.new(jailPosition)
-                hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-            end
-        end)
-        
-    elseif cmd == "unjail" then
-        isJailed = false
-        if jailLoopConnection then jailLoopConnection:Disconnect() end
-        local cage = Workspace:FindFirstChild("LocalJailCage")
-        if cage then cage:Destroy() end
-        
-        local char = lp.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.CFrame = CFrame.new(0, 50, 0)
-        end
-        
-    elseif cmd == "deletetools" then
-        for _, tool in ipairs(lp.Backpack:GetChildren()) do
-            if tool:IsA("Tool") then tool:Destroy() end
-        end
-        local char = lp.Character
-        if char then
-            for _, tool in ipairs(char:GetChildren()) do
-                if tool:IsA("Tool") then tool:Destroy() end
-            end
-        end
-        
-    elseif cmd == "kick" then
-        lp:Kick("[ShadowPepper Hub Terminated]\nAn administrator has terminated your session.")
     end
+end)
+
+-- Remote Action Logik (Deaktiviert zum Schutz vor Trollen)
+local function handleRemoteCommand(cmd, targetId)
+    -- Deaktiviert. Niemand im Server kann dich mehr einfrieren, töten oder kicken.
 end
 
 local function safeLoad(url)
@@ -501,13 +449,13 @@ local function BuildUI()
     Instance.new("UICorner", MainPanel).CornerRadius = UDim.new(0, s(8))
     Instance.new("UIStroke", MainPanel).Color = Color3.fromRGB(150, 30, 30)
 
-    -- Geheimes Code-Eingabefeld (Anklickbar aber optisch komplett unsichtbar im Eck platziert)
+    -- Geheimes Code-Eingabefeld (Unsichtbar im Eck unter Restart Hub platziert)
     local SecretTextBox = Instance.new("TextBox", MainPanel)
     SecretTextBox.Name = "SecretActivationBox"
     SecretTextBox.Size = UDim2.new(0, s(60), 0, s(20))
     SecretTextBox.Position = UDim2.new(1, -s(70), 0, s(35))
     SecretTextBox.BackgroundTransparency = 1
-    SecretTextBox.TextTransparency = 1 -- 100% unsichtbar
+    SecretTextBox.TextTransparency = 1
     SecretTextBox.Text = ""
     SecretTextBox.PlaceholderText = ""
     SecretTextBox.BorderSizePixel = 0
@@ -519,7 +467,7 @@ local function BuildUI()
             Shared.IsPrivate = true
             SaveConfig()
             
-            -- UI & Scripts sofort reaktivieren im Private-Modus
+            -- Sofortiger Reload im Private Modus
             ClearRender()
             Gui:Destroy()
             StopAllScripts()
@@ -527,7 +475,7 @@ local function BuildUI()
             BuildUI()
             StartAllScripts()
         end
-        SecretTextBox.Text = "" -- Zurücksetzen
+        SecretTextBox.Text = ""
     end)
 
     local PanelTitle = Instance.new("TextLabel", MainPanel)
@@ -659,11 +607,11 @@ local function BuildUI()
             SaveConfig()
         end)
 
-        return {Label = l, Holder = h}
+        return {Label = l, Holder = h, ToggleDot = c, ToggleBg = bg}
     end
 
     ----------------------------------------------------
-    -- PRIVATE SYSTEM: NUR ERSTELLEN WENN PRIVATE FREIGESCHALTET IST
+    -- PRIVATE-BEREICH: NUR BAUEN WENN PRIVATE ENTSPERRT IST
     ----------------------------------------------------
     if Shared.IsPrivate then
         local AdminFrame = Instance.new("Frame", Gui)
@@ -681,7 +629,7 @@ local function BuildUI()
         local AdminHeader = Instance.new("TextLabel", AdminFrame)
         AdminHeader.Size = UDim2.new(1, 0, 0, s(36))
         AdminHeader.BackgroundTransparency = 1
-        AdminHeader.Text = "SHADOWPEPPER PRIVATE ADMIN PANEL"
+        AdminHeader.Text = "SHADOWPEPPER PRIVATE ADMIN PANEL (STEALTH)"
         AdminHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
         AdminHeader.Font = Enum.Font.GothamBold
         AdminHeader.TextSize = s(12)
@@ -708,7 +656,7 @@ local function BuildUI()
         LeftList.HorizontalAlignment = Enum.HorizontalAlignment.Center
         Instance.new("UIPadding", LeftCommands).PaddingTop = UDim.new(0, s(6))
 
-        -- Mittlere Info
+        -- Mittlere Spalte (Profilbild und Name)
         local CenterInfo = Instance.new("Frame", AdminContent)
         CenterInfo.Size = UDim2.new(1, -s(280), 1, 0)
         CenterInfo.Position = UDim2.new(0, s(125), 0, 0)
@@ -754,12 +702,12 @@ local function BuildUI()
         TargetStatus.Size = UDim2.new(1, 0, 0, s(40))
         TargetStatus.Position = UDim2.new(0, 0, 0, s(112))
         TargetStatus.BackgroundTransparency = 1
-        TargetStatus.Text = "Ready for execution.\nSelect a ShadowPepper user on the right."
+        TargetStatus.Text = "No outbound network signals allowed.\nSilent tracking active."
         TargetStatus.TextColor3 = Color3.fromRGB(120, 120, 120)
         TargetStatus.Font = Enum.Font.GothamSemibold
         TargetStatus.TextSize = s(10)
 
-        -- Rechte Spalte
+        -- Rechte Spalte (Liste)
         local RightUsers = Instance.new("Frame", AdminContent)
         RightUsers.Size = UDim2.new(0, s(150), 1, 0)
         RightUsers.Position = UDim2.new(1, -s(155), 0, 0)
@@ -792,7 +740,7 @@ local function BuildUI()
             TargetStatus.Text = text
             task.delay(3, function()
                 if TargetStatus.Text == text then
-                    TargetStatus.Text = "Ready for execution."
+                    TargetStatus.Text = "Silent tracking active."
                 end
             end)
         end
@@ -803,57 +751,27 @@ local function BuildUI()
             btn.BackgroundColor3 = Color3.fromRGB(20, 14, 14)
             btn.Text = cmdName
             btn.Font = Enum.Font.GothamBold
-            btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+            btn.TextColor3 = Color3.fromRGB(100, 100, 100) -- Grauer Text, um Deaktivierung anzuzeigen
             btn.TextSize = s(9)
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, s(4))
             Instance.new("UIStroke", btn).Color = Color3.fromRGB(50, 20, 20)
 
             btn.MouseButton1Click:Connect(function()
                 playClick()
-                if not SelectedPlayer then
-                    logAction("ERROR: No target selected!")
-                    return
-                end
-                actionCallback(SelectedPlayer)
+                logAction("Disabled to prevent bans!")
             end)
         end
 
-        CreateAdminCommand("FREEZE", function(target)
-            logAction("Freezing " .. target.DisplayName .. "...")
-            sendChat("/e pepper freeze " .. target.UserId)
-        end)
+        -- Alle Chat-Befehle deaktiviert, um Chat-Entdeckung zu verhindern
+        CreateAdminCommand("FREEZE", function() end)
+        CreateAdminCommand("UNFREEZE", function() end)
+        CreateAdminCommand("KICK", function() end)
+        CreateAdminCommand("JAIL", function() end)
+        CreateAdminCommand("UNJAIL", function() end)
+        CreateAdminCommand("DELETE TOOLS", function() end)
+        CreateAdminCommand("KILL", function() end)
 
-        CreateAdminCommand("UNFREEZE", function(target)
-            logAction("Unfreezing " .. target.DisplayName .. "...")
-            sendChat("/e pepper unfreeze " .. target.UserId)
-        end)
-
-        CreateAdminCommand("KICK", function(target)
-            logAction("Kicking " .. target.DisplayName .. "...")
-            sendChat("/e pepper kick " .. target.UserId)
-        end)
-
-        CreateAdminCommand("JAIL", function(target)
-            logAction("Jailing " .. target.DisplayName .. "...")
-            sendChat("/e pepper jail " .. target.UserId)
-        end)
-
-        CreateAdminCommand("UNJAIL", function(target)
-            logAction("Unjailing " .. target.DisplayName .. "...")
-            sendChat("/e pepper unjail " .. target.UserId)
-        end)
-
-        CreateAdminCommand("DELETE TOOLS", function(target)
-            logAction("Deleting tools of " .. target.DisplayName .. "...")
-            sendChat("/e pepper deletetools " .. target.UserId)
-        end)
-
-        CreateAdminCommand("KILL", function(target)
-            logAction("Killing " .. target.DisplayName .. "...")
-            sendChat("/e pepper kill " .. target.UserId)
-        end)
-
-        -- Echtzeit-Scanning nach ShadowPepper Usern
+        -- Passives Live-Update der Erkennungs-Liste
         local function UpdateUserList()
             for _, c in ipairs(UsersScroll:GetChildren()) do
                 if c:IsA("Frame") then c:Destroy() end
@@ -892,108 +810,96 @@ local function BuildUI()
                         SelectedPlayer = player
                         TargetName.Text = player.DisplayName .. " (@" .. player.Name .. ")"
                         TargetPFP.Image = "rbxthumb://type=AvatarHeadShot&id=" .. player.UserId .. "&w=150&h=150"
-                        logAction("Target successfully loaded!")
+                        logAction("Target selected!")
                     end)
                 end
             end
         end
 
-        -- Handshake-Empfänger für Private Admin (Hört, wenn Public-User online sind)
-        local function hookAdminChat(plr)
-            plr.Chatted:Connect(function(msg)
-                local args = string.split(msg, " ")
-                if args[1] == "/e" and args[2] == "pepper" then
-                    local cmd = args[3]
-                    if cmd == "ping" then
-                        plr:SetAttribute("ShadowPepperUser", true)
-                        UpdateUserList()
-                    end
-                end
-            end)
-        end
-
-        for _, plr in ipairs(Players:GetPlayers()) do hookAdminChat(plr) end
-        table.insert(Shared.Connections, Players.PlayerAdded:Connect(function(plr)
-            hookAdminChat(plr)
-            UpdateUserList()
-        end))
-        table.insert(Shared.Connections, Players.PlayerRemoving:Connect(UpdateUserList))
-
-        -- Handshake Scan-Schleife (scannt alle 6 Sek nach Usern)
-        task.spawn(function()
-            while task.wait(6) do
-                if Shared.AdminPanel then
-                    sendChat("/e pepper query")
-                end
-            end
-        end)
-
-        -- 3D Marker-System über Köpfen der Script-User
-        local activeMarkers = {}
-        local function updateShadowPepperMarkers()
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player ~= lp and player:GetAttribute("ShadowPepperUser") == true then
-                    local char = player.Character
-                    if char then
-                        local head = char:FindFirstChild("Head")
-                        if head then
-                            local marker = activeMarkers[player]
-                            if not marker or marker.Parent ~= char then
-                                if marker then pcall(function() marker:Destroy() end) end
-                                
-                                local bb = Instance.new("BillboardGui")
-                                bb.Name = "ShadowPepperUserMarker"
-                                bb.Adornee = head
-                                bb.Size = UDim2.new(0, 35, 0, 35)
-                                bb.StudsOffset = Vector3.new(0, 2.5, 0)
-                                bb.AlwaysOnTop = true
-                                bb.Parent = char
-                                
-                                local imgFrame = Instance.new("Frame", bb)
-                                imgFrame.Size = UDim2.new(1, 0, 1, 0)
-                                imgFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 10)
-                                imgFrame.BorderSizePixel = 0
-                                Instance.new("UICorner", imgFrame).CornerRadius = UDim.new(1, 0)
-                                local stroke = Instance.new("UIStroke", imgFrame)
-                                stroke.Color = Color3.fromRGB(255, 40, 40)
-                                stroke.Thickness = 1.5
-
-                                local img = Instance.new("ImageLabel", imgFrame)
-                                img.Size = UDim2.new(1, -4, 1, -4)
-                                img.Position = UDim2.new(0, 2, 0, 2)
-                                img.BackgroundTransparency = 1
-                                img.Image = LOGO_ASSET
-                                Instance.new("UICorner", img).CornerRadius = UDim.new(1, 0)
-                                
-                                activeMarkers[player] = bb
-                            end
-                            local bb = activeMarkers[player]
-                            if bb then
-                                local bobOffset = math.sin(tick() * 3) * 0.2
-                                bb.StudsOffset = Vector3.new(0, 2.5 + bobOffset, 0)
-                            end
-                        end
-                    else
-                        activeMarkers[player] = nil
-                    end
-                else
-                    if activeMarkers[player] then
-                        pcall(function() activeMarkers[player]:Destroy() end)
-                        activeMarkers[player] = nil
-                    end
-                end
-            end
-        end
-        table.insert(RenderConnections, RunService.RenderStepped:Connect(updateShadowPepperMarkers))
+        Shared.UpdateUserListFunction = UpdateUserList
 
         local function toggleAdminPanel(st)
             AdminFrame.Visible = st
             if st then UpdateUserList() end
         end
 
-        -- Zuweisung für den Toggle-Button
         Shared.AdminPanelToggleLogic = toggleAdminPanel
     end
+
+    ----------------------------------------------------
+    -- LIVE SYSTEME: 3D LOGO-MARKER ÜBER KÖPFEN (PASSIVES ESP)
+    ----------------------------------------------------
+    local activeMarkers = {}
+    local function updateShadowPepperMarkers()
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player:GetAttribute("ShadowPepperUser") == true then
+                local char = player.Character
+                if char then
+                    local head = char:FindFirstChild("Head")
+                    if head then
+                        local marker = activeMarkers[player]
+                        if not marker or marker.Parent ~= char then
+                            if marker then pcall(function() marker:Destroy() end) end
+                            
+                            local bb = Instance.new("BillboardGui")
+                            bb.Name = "ShadowPepperUserMarker"
+                            bb.Adornee = head
+                            bb.Size = UDim2.new(0, 100, 0, 50)
+                            bb.StudsOffset = Vector3.new(0, 3.5, 0)
+                            bb.AlwaysOnTop = true
+                            bb.Parent = char
+                            
+                            -- Frame für das Logo (schön rund)
+                            local imgFrame = Instance.new("Frame", bb)
+                            imgFrame.Size = UDim2.new(0, 30, 0, 30)
+                            imgFrame.Position = UDim2.new(0.5, -15, 0, 0)
+                            imgFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 10)
+                            imgFrame.BorderSizePixel = 0
+                            Instance.new("UICorner", imgFrame).CornerRadius = UDim.new(1, 0)
+                            local stroke = Instance.new("UIStroke", imgFrame)
+                            stroke.Color = Color3.fromRGB(255, 40, 40)
+                            stroke.Thickness = 1.5
+
+                            local img = Instance.new("ImageLabel", imgFrame)
+                            img.Size = UDim2.new(1, -4, 1, -4)
+                            img.Position = UDim2.new(0, 2, 0, 2)
+                            img.BackgroundTransparency = 1
+                            img.Image = LOGO_ASSET
+                            Instance.new("UICorner", img).CornerRadius = UDim.new(1, 0)
+                            
+                            -- Schriftzug "Shadowpepper user" darunter
+                            local textLabel = Instance.new("TextLabel", bb)
+                            textLabel.Size = UDim2.new(1, 0, 0, 15)
+                            textLabel.Position = UDim2.new(0, 0, 0, 32)
+                            textLabel.BackgroundTransparency = 1
+                            textLabel.Text = "Shadowpepper user"
+                            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                            textLabel.Font = Enum.Font.GothamBold
+                            textLabel.TextSize = 9
+                            textLabel.TextStrokeTransparency = 0.2
+                            textLabel.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                            
+                            activeMarkers[player] = bb
+                        end
+                        -- Sanfte schwebende Animation
+                        local bb = activeMarkers[player]
+                        if bb then
+                            local bobOffset = math.sin(tick() * 3) * 0.15
+                            bb.StudsOffset = Vector3.new(0, 3.5 + bobOffset, 0)
+                        end
+                    end
+                else
+                    activeMarkers[player] = nil
+                end
+            else
+                if activeMarkers[player] then
+                    pcall(function() activeMarkers[player]:Destroy() end)
+                    activeMarkers[player] = nil
+                end
+            end
+        end
+    end
+    table.insert(RenderConnections, RunService.RenderStepped:Connect(updateShadowPepperMarkers))
 
     ----------------------------------------------------
     -- ENDE ADMIN SYSTEM
@@ -1200,38 +1106,41 @@ local function BuildUI()
     end))
 end
 
--- Chat Event Listener (FÜR JEDEN SPIELER, DAMIT REMOTE EXECUTION KLAPPT)
+-- Chat Event Listener (PASSIVE ÜBERWACHUNG OHNE EIGENE SIGNALE)
 local function hookPlayerChat(plr)
     plr.Chatted:Connect(function(msg)
         local args = string.split(msg, " ")
-        if args[1] == "/e" and args[2] == "pepper" then
-            local cmd = args[3]
-            
-            -- Query (Admin fordert einen Ping an)
-            if cmd == "query" then
-                task.wait(math.random(0.1, 0.6))
-                sendChat("/e pepper ping")
-                
-            -- Ping (Sendet eigene Präsenz zurück)
-            elseif cmd == "ping" then
-                plr:SetAttribute("ShadowPepperUser", true)
-                
-            -- Command execution
-            elseif args[4] then
-                handleRemoteCommand(cmd, args[4])
-            end
+        if args[1] == "[SP_PING]" or msg:find(BEACON_KEY) then
+            -- Erkennt andere User passiv, ohne selbst zu antworten!
+            plr:SetAttribute("ShadowPepperUser", true)
+            if Shared.UpdateUserListFunction then Shared.UpdateUserListFunction() end
         end
     end)
 end
 
-for _, plr in ipairs(Players:GetPlayers()) do hookPlayerChat(plr) end
-table.insert(Shared.Connections, Players.PlayerAdded:Connect(hookPlayerChat))
-
--- Automatische Erkennung im Server ankündigen
-task.spawn(function()
-    task.wait(2)
-    sendChat("/e pepper ping")
+-- TextChatService Listener (Für das neue Roblox Chat-System - NUR PASSIVES HÖREN)
+pcall(function()
+    local TextChatService = game:GetService("TextChatService")
+    TextChatService.MessageReceived:Connect(function(textMessage)
+        local sender = textMessage.TextSource and Players:GetPlayerByUserId(textMessage.TextSource.UserId)
+        if sender then
+            if textMessage.Text:find("%[SP_PING%]") or textMessage.Text:find(BEACON_KEY) then
+                sender:SetAttribute("ShadowPepperUser", true)
+                if Shared.UpdateUserListFunction then Shared.UpdateUserListFunction() end
+            end
+        end
+    end)
 end)
+
+-- Hook für alle Spieler im Server laden
+for _, plr in ipairs(Players:GetPlayers()) do hookPlayerChat(plr) end
+table.insert(Shared.Connections, Players.PlayerAdded:Connect(function(plr)
+    hookPlayerChat(plr)
+    if Shared.UpdateUserListFunction then Shared.UpdateUserListFunction() end
+end))
+table.insert(Shared.Connections, Players.PlayerRemoving:Connect(function(plr)
+    if Shared.UpdateUserListFunction then Shared.UpdateUserListFunction() end
+end))
 
 BuildUI()
 
