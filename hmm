@@ -13,6 +13,9 @@ local HttpService = game:GetService("HttpService")
 local lp = Players.LocalPlayer
 
 
+lp:SetAttribute("ShadowPepperUser", true)
+
+
 local FIREBASE_URL = "https://shadowpepper-hub-default-rtdb.firebaseio.com/" -- <--- Trage hier deine Firebase-URL ein!
 
 
@@ -34,6 +37,7 @@ local CONFIG_FILE = "SchmecktHub_RedPro_Settings_" .. lp.UserId .. ".json"
 
 pcall(function()
     if CoreGui:FindFirstChild("SchmecktHubPro") then CoreGui.SchmecktHubPro:Destroy() end
+    if CoreGui:FindFirstChild("SchmecktAdminFrame") then CoreGui.SchmecktAdminFrame:Destroy() end
     if getgenv().SMKT_DISABLE then getgenv().SMKT_DISABLE() end
 end)
 
@@ -108,9 +112,9 @@ local function playClick()
 end
 
 ----------------------------------------------------
--- HTTP EXECUTOR COMPATIBILITY WRAPPER
+-- MULTI-EXECUTOR HTTP WRAPPER (SYNAPSE, SOLARA, WAVE ETC.)
 ----------------------------------------------------
-local request = (syn and syn.request) or (http and http.request) or (http_request) or request
+local request = request or (syn and syn.request) or (http and http.request) or (http_request)
 if not request then
     lp:Kick("[ShadowPepper Hub Error]\nYour executor does not support HTTP Requests. Script cannot load.")
     return
@@ -128,17 +132,6 @@ local function dbWrite(path, data)
     end)
 end
 
-local function dbUpdate(path, data)
-    pcall(function()
-        request({
-            Url = FIREBASE_URL .. path .. ".json",
-            Method = "PATCH",
-            Headers = { ["Content-Type"] = "application/json" },
-            Body = HttpService:JSONEncode(data)
-        })
-    end)
-end
-
 local function dbRead(path)
     local success, response = pcall(function()
         return request({
@@ -146,8 +139,13 @@ local function dbRead(path)
             Method = "GET"
         })
     end)
-    if success and response and response.StatusCode == 200 then
-        return HttpService:JSONDecode(response.Body)
+    if success and response then
+        -- Universeller Check für StatusCode ODER Status (Löst Executor-Inkompatibilitäten)
+        local statusCode = response.StatusCode or response.Status
+        if (statusCode == 200 or statusCode == 201) and response.Body and response.Body ~= "null" then
+            local ok, decoded = pcall(function() return HttpService:JSONDecode(response.Body) end)
+            if ok then return decoded end
+        end
     end
     return nil
 end
@@ -162,13 +160,13 @@ local function dbDelete(path)
 end
 
 ----------------------------------------------------
--- DATABASE PRESENCE & COMMAND LOOP (100% STEALTH)
+-- DATABASE PRESENCE & COMMAND LOOP (MIT CACHING)
 ----------------------------------------------------
 local ServerID = game.JobId ~= "" and game.JobId or "StudioTesting"
 local UserPath = "servers/" .. ServerID .. "/users/" .. lp.UserId
 local CommandPath = "servers/" .. ServerID .. "/commands/" .. lp.UserId
 
--- Status Variablen für Befehle
+local CachedUsers = {} -- Lokales Cache-Register
 local isFrozen = false
 local isJailed = false
 local jailLoopConnection = nil
@@ -238,10 +236,10 @@ local function executeCloudCommand(cmd)
     end
 end
 
--- Loop 1: Präsenz melden (Alle 5 Sekunden) und nach Befehlen lauschen
+-- EINZIGER HINTERGRUND-LOOP FÜR FIREBASE
 task.spawn(function()
-    while task.wait(3) do
-        -- 1. In der Cloud als online melden
+    while true do
+        -- 1. In der Cloud registrieren
         dbWrite(UserPath, {
             Username = lp.Name,
             DisplayName = lp.DisplayName,
@@ -251,15 +249,21 @@ task.spawn(function()
         -- 2. Nach neuen Cloud-Befehlen suchen
         local cmdData = dbRead(CommandPath)
         if cmdData and cmdData.Command then
-            dbDelete(CommandPath) -- Befehl sofort löschen, damit er nur 1x ausgeführt wird
-            task.spawn(function()
-                executeCloudCommand(cmdData.Command)
-            end)
+            dbDelete(CommandPath)
+            task.spawn(function() executeCloudCommand(cmdData.Command) end)
         end
+
+        -- 3. Daten abrufen und im lokalen Speicher cachen
+        local dbUsers = dbRead("servers/" .. ServerID .. "/users")
+        if dbUsers then
+            CachedUsers = dbUsers
+        end
+
+        task.wait(3)
     end
 end)
 
--- Beim Verlassen des Spiels Eintrag sofort sauber löschen
+-- Beim Verlassen des Spiels Eintrag sofort löschen
 game:GetService("Players").PlayerRemoving:Connect(function(player)
     if player == lp then
         dbDelete(UserPath)
@@ -421,10 +425,7 @@ local function StopAllScripts()
     Stop_Generic("SchmecktPurchasePanel")
     Stop_Generic("SchmecktDesyncPanel")
     Stop_Generic("Schmeckt_InstantStomp_UI", "InstantStompGui")
-    if lp and lp:FindFirstChild("PlayerGui") then
-        local sn = lp.PlayerGui:FindFirstChild("StaffNotifierGui") if sn then sn:Destroy() end
-        local sl = lp.PlayerGui:FindFirstChild("StaffListGui") if sl then sl:Destroy() end
-    end
+    if CoreGui:FindFirstChild("SchmecktAdminFrame") then CoreGui.SchmecktAdminFrame:Destroy() end
     CleanupSilentAim()
     Stop_TargetPanel()
     Stop_VisualPanel()
@@ -457,6 +458,7 @@ end
 getgenv().SMKT_DISABLE = function()
     ClearRender()
     if CoreGui:FindFirstChild("SchmecktHubPro") then CoreGui.SchmecktHubPro:Destroy() end
+    if CoreGui:FindFirstChild("SchmecktAdminFrame") then CoreGui.SchmecktAdminFrame:Destroy() end
 end
 
 local function BuildUI()
@@ -727,34 +729,37 @@ local function BuildUI()
     -- PRIVATE-BEREICH: CLOUD ADMIN PANEL
     ----------------------------------------------------
     if Shared.IsPrivate then
-        local AdminFrame = Instance.new("Frame", Gui)
-        AdminFrame.Name = "AdminFrame"
-        AdminFrame.Size = UDim2.new(0, s(460), 0, s(280))
-        AdminFrame.Position = UDim2.new(0.5, -s(230), 0.5, -s(140))
-        AdminFrame.BackgroundColor3 = Color3.fromRGB(14, 10, 10)
-        AdminFrame.BorderSizePixel = 0
-        AdminFrame.Active = true
-        AdminFrame.Draggable = true
-        AdminFrame.Visible = Shared.AdminPanel
-        Instance.new("UICorner", AdminFrame).CornerRadius = UDim.new(0, s(8))
-        Instance.new("UIStroke", AdminFrame).Color = Color3.fromRGB(255, 40, 40)
+        local AdminFrame = Instance.new("ScreenGui", CoreGui)
+        AdminFrame.Name = "SchmecktAdminFrame"
+        AdminFrame.ResetOnSpawn = false
+        
+        local MainAdmin = Instance.new("Frame", AdminFrame)
+        MainAdmin.Size = UDim2.new(0, s(460), 0, s(280))
+        MainAdmin.Position = UDim2.new(0.5, -s(230), 0.5, -s(140))
+        MainAdmin.BackgroundColor3 = Color3.fromRGB(14, 10, 10)
+        MainAdmin.BorderSizePixel = 0
+        MainAdmin.Active = true
+        MainAdmin.Draggable = true
+        MainAdmin.Visible = Shared.AdminPanel
+        Instance.new("UICorner", MainAdmin).CornerRadius = UDim.new(0, s(8))
+        Instance.new("UIStroke", MainAdmin).Color = Color3.fromRGB(255, 40, 40)
 
-        local AdminHeader = Instance.new("TextLabel", AdminFrame)
+        local AdminHeader = Instance.new("TextLabel", MainAdmin)
         AdminHeader.Size = UDim2.new(1, 0, 0, s(36))
         AdminHeader.BackgroundTransparency = 1
-        AdminHeader.Text = "SHADOWPEPPER CLOUD ADMIN PANEL"
+        AdminHeader.Text = "SHADOWPEPPER CLOUD ADMIN PANEL (LAG-FREE)"
         AdminHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
         AdminHeader.Font = Enum.Font.GothamBold
         AdminHeader.TextSize = s(12)
         AdminHeader.TextXAlignment = Enum.TextXAlignment.Center
 
-        local AdminDiv = Instance.new("Frame", AdminFrame)
+        local AdminDiv = Instance.new("Frame", MainAdmin)
         AdminDiv.Size = UDim2.new(1, 0, 0, 1)
         AdminDiv.Position = UDim2.new(0, 0, 0, s(36))
         AdminDiv.BackgroundColor3 = Color3.fromRGB(60, 15, 15)
         AdminDiv.BorderSizePixel = 0
 
-        local AdminContent = Instance.new("Frame", AdminFrame)
+        local AdminContent = Instance.new("Frame", MainAdmin)
         AdminContent.Size = UDim2.new(1, 0, 1, -s(37))
         AdminContent.Position = UDim2.new(0, 0, 0, s(37))
         AdminContent.BackgroundTransparency = 1
@@ -815,7 +820,7 @@ local function BuildUI()
         TargetStatus.Size = UDim2.new(1, 0, 0, s(40))
         TargetStatus.Position = UDim2.new(0, 0, 0, s(112))
         TargetStatus.BackgroundTransparency = 1
-        TargetStatus.Text = "No network signals. Cloud Database listening."
+        TargetStatus.Text = "Cached sync active."
         TargetStatus.TextColor3 = Color3.fromRGB(120, 120, 120)
         TargetStatus.Font = Enum.Font.GothamSemibold
         TargetStatus.TextSize = s(10)
@@ -829,7 +834,7 @@ local function BuildUI()
         local RightHeader = Instance.new("TextLabel", RightUsers)
         RightHeader.Size = UDim2.new(1, 0, 0, s(24))
         RightHeader.BackgroundTransparency = 1
-        RightHeader.Text = "ACTIVE USERS (SERVER)"
+        RightHeader.Text = "ACTIVE SHADOWPEPPERS"
         RightHeader.TextColor3 = Color3.fromRGB(255, 80, 80)
         RightHeader.Font = Enum.Font.GothamBold
         RightHeader.TextSize = s(9)
@@ -854,7 +859,7 @@ local function BuildUI()
             TargetStatus.Text = text
             task.delay(3, function()
                 if TargetStatus.Text == text then
-                    TargetStatus.Text = "Cloud database listening."
+                    TargetStatus.Text = "Cached sync active."
                 end
             end)
         end
@@ -879,7 +884,6 @@ local function BuildUI()
                 end
                 logAction("Cloud Sending: " .. cmdName)
                 
-                -- Schreibt den Befehl direkt in die Cloud des Ziels
                 dbWrite("servers/" .. ServerID .. "/commands/" .. SelectedPlayerId, {
                     Command = actionValue,
                     Timestamp = os.time()
@@ -887,7 +891,6 @@ local function BuildUI()
             end)
         end
 
-        -- Neue Cloud Befehle
         CreateAdminCommand("FREEZE", "freeze")
         CreateAdminCommand("UNFREEZE", "unfreeze")
         CreateAdminCommand("KICK", "kick")
@@ -896,56 +899,62 @@ local function BuildUI()
         CreateAdminCommand("DELETE TOOLS", "deletetools")
         CreateAdminCommand("KILL", "kill")
 
-        -- Update die Liste aus Firebase (Polling)
+        -- Update die Liste lag-frei aus dem lokalen Speicher (CachedUsers)
         local function UpdateUserList()
-            local activeInDb = dbRead("servers/" .. ServerID .. "/users")
-            
             for _, c in ipairs(UsersScroll:GetChildren()) do
                 if c:IsA("Frame") then c:Destroy() end
             end
 
-            if not activeInDb then return end
-
-            local currentTime = os.time()
-
-            for userIdStr, data in pairs(activeInDb) do
+            -- Loop durch alle gecachten Cloud-Einträge
+            for userIdStr, data in pairs(CachedUsers) do
                 local targetId = tonumber(userIdStr)
-                -- Ignoriere uns selbst und filtere veraltete Sessions (älter als 15 Sekunden) raus
-                if targetId and targetId ~= lp.UserId and (currentTime - (data.LastSeen or 0)) < 15 then
-                    local row = Instance.new("Frame", UsersScroll)
-                    row.Size = UDim2.new(0.95, 0, 0, s(28))
-                    row.BackgroundColor3 = Color3.fromRGB(20, 14, 14)
-                    Instance.new("UICorner", row).CornerRadius = UDim.new(0, s(4))
-                    Instance.new("UIStroke", row).Color = Color3.fromRGB(50, 20, 20)
+                if targetId then
+                    -- Präsenzprüfung: Ist der Spieler überhaupt in unserem Roblox-Server?
+                    local targetPlayer = Players:GetPlayerByUserId(targetId)
+                    
+                    if targetPlayer then
+                        local row = Instance.new("Frame", UsersScroll)
+                        row.Size = UDim2.new(0.95, 0, 0, s(28))
+                        row.BackgroundColor3 = Color3.fromRGB(20, 14, 14)
+                        Instance.new("UICorner", row).CornerRadius = UDim.new(0, s(4))
+                        Instance.new("UIStroke", row).Color = Color3.fromRGB(50, 20, 20)
 
-                    local pName = Instance.new("TextLabel", row)
-                    pName.Size = UDim2.new(0.6, 0, 1, 0)
-                    pName.Position = UDim2.new(0, s(6), 0, 0)
-                    pName.BackgroundTransparency = 1
-                    pName.Text = data.DisplayName or data.Username
-                    pName.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    pName.Font = Enum.Font.GothamSemibold
-                    pName.TextSize = s(10)
-                    pName.TextXAlignment = Enum.TextXAlignment.Left
+                        local pName = Instance.new("TextLabel", row)
+                        pName.Size = UDim2.new(0.6, 0, 1, 0)
+                        pName.Position = UDim2.new(0, s(6), 0, 0)
+                        pName.BackgroundTransparency = 1
+                        
+                        -- Hebe dich selbst in der Liste hervor
+                        local displayName = data.DisplayName or data.Username
+                        if targetId == lp.UserId then
+                            displayName = displayName .. " (You)"
+                        end
+                        
+                        pName.Text = displayName
+                        pName.TextColor3 = targetId == lp.UserId and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(255, 255, 255)
+                        pName.Font = Enum.Font.GothamSemibold
+                        pName.TextSize = s(10)
+                        pName.TextXAlignment = Enum.TextXAlignment.Left
 
-                    local selBtn = Instance.new("TextButton", row)
-                    selBtn.Size = UDim2.new(0.35, 0, 0.7, 0)
-                    selBtn.Position = UDim2.new(0.62, 0, 0.15, 0)
-                    selBtn.BackgroundColor3 = Color3.fromRGB(150, 30, 30)
-                    selBtn.Text = "SELECT"
-                    selBtn.Font = Enum.Font.GothamBold
-                    selBtn.TextSize = s(8)
-                    selBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    Instance.new("UICorner", selBtn).CornerRadius = UDim.new(0, s(3))
+                        local selBtn = Instance.new("TextButton", row)
+                        selBtn.Size = UDim2.new(0.35, 0, 0.7, 0)
+                        selBtn.Position = UDim2.new(0.62, 0, 0.15, 0)
+                        selBtn.BackgroundColor3 = Color3.fromRGB(150, 30, 30)
+                        selBtn.Text = "SELECT"
+                        selBtn.Font = Enum.Font.GothamBold
+                        selBtn.TextSize = s(8)
+                        selBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        Instance.new("UICorner", selBtn).CornerRadius = UDim.new(0, s(3))
 
-                    selBtn.MouseButton1Click:Connect(function()
-                        playClick()
-                        SelectedPlayerId = targetId
-                        SelectedPlayerName = data.Username
-                        TargetName.Text = (data.DisplayName or data.Username) .. " (@" .. data.Username .. ")"
-                        TargetPFP.Image = "rbxthumb://type=AvatarHeadShot&id=" .. targetId .. "&w=150&h=150"
-                        logAction("Target synced via cloud!")
-                    end)
+                        selBtn.MouseButton1Click:Connect(function()
+                            playClick()
+                            SelectedPlayerId = targetId
+                            SelectedPlayerName = data.Username
+                            TargetName.Text = displayName .. " (@" .. data.Username .. ")"
+                            TargetPFP.Image = "rbxthumb://type=AvatarHeadShot&id=" .. targetId .. "&w=150&h=150"
+                            logAction("Target selected!")
+                        end)
+                    end
                 end
             end
         end
@@ -953,44 +962,41 @@ local function BuildUI()
         Shared.UpdateUserListFunction = UpdateUserList
 
         local function toggleAdminPanel(st)
-            AdminFrame.Visible = st
+            MainAdmin.Visible = st
             if st then UpdateUserList() end
         end
 
         Shared.AdminPanelToggleLogic = toggleAdminPanel
         
-        -- Automatischer Live-Sync der Admin-Liste alle 4 Sekunden (wenn offen)
+        -- Aktualisiert die Benutzeroberfläche alle 2 Sekunden aus dem Speicher
         task.spawn(function()
-            while task.wait(4) do
-                if AdminFrame.Visible then
+            while true do
+                if MainAdmin.Visible then
                     pcall(UpdateUserList)
                 end
+                task.wait(2)
             end
         end)
     end
 
     ----------------------------------------------------
-    -- LIVE CLOUD ESP: 3D LOGO-MARKER ÜBER KÖPFEN
+    -- CLOUD ESP: 3D LOGO-MARKER ÜBER KÖPFEN DER NUTZER
     ----------------------------------------------------
     local activeMarkers = {}
     
     local function updateShadowPepperMarkers()
-        local activeInDb = dbRead("servers/" .. ServerID .. "/users")
-        local currentTime = os.time()
-        
-        -- Setze Attribute basierend auf der Cloud-Datenbank
+        -- Markiere alle registrierten Spieler
         for _, player in ipairs(Players:GetPlayers()) do
-            if player ~= lp then
-                local inDb = activeInDb and activeInDb[tostring(player.UserId)]
-                if inDb and (currentTime - (inDb.LastSeen or 0)) < 15 then
-                    player:SetAttribute("ShadowPepperUser", true)
-                else
-                    player:SetAttribute("ShadowPepperUser", nil)
-                end
+            local inDb = CachedUsers[tostring(player.UserId)] or CachedUsers[player.UserId]
+            
+            if inDb or player == lp then
+                player:SetAttribute("ShadowPepperUser", true)
+            else
+                player:SetAttribute("ShadowPepperUser", nil)
             end
         end
 
-        -- Render die 3D Marker
+        -- 3D Marker rendern
         for _, player in ipairs(Players:GetPlayers()) do
             if player:GetAttribute("ShadowPepperUser") == true then
                 local char = player.Character
@@ -1030,8 +1036,8 @@ local function BuildUI()
                             textLabel.Size = UDim2.new(1, 0, 0, 15)
                             textLabel.Position = UDim2.new(0, 0, 0, 32)
                             textLabel.BackgroundTransparency = 1
-                            textLabel.Text = "Shadowpepper user"
-                            textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+                            textLabel.Text = player == lp and "You (Testing)" or "Shadowpepper user"
+                            textLabel.TextColor3 = player == lp and Color3.fromRGB(255, 120, 120) or Color3.fromRGB(255, 255, 255)
                             textLabel.Font = Enum.Font.GothamBold
                             textLabel.TextSize = 9
                             textLabel.TextStrokeTransparency = 0.2
