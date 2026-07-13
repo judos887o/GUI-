@@ -18,7 +18,6 @@ lp:SetAttribute("ShadowPepperUser", true)
 
 local FIREBASE_URL = "https://shadowpepper-hub-default-rtdb.firebaseio.com/" -- <--- Trage hier deine Firebase-URL ein!
 
-
 if FIREBASE_URL:sub(-1) ~= "/" then FIREBASE_URL = FIREBASE_URL .. "/" end
 
 local BlacklistedUsers = {
@@ -140,7 +139,6 @@ local function dbRead(path)
         })
     end)
     if success and response then
-        -- Universeller Check für StatusCode ODER Status (Löst Executor-Inkompatibilitäten)
         local statusCode = response.StatusCode or response.Status
         if (statusCode == 200 or statusCode == 201) and response.Body and response.Body ~= "null" then
             local ok, decoded = pcall(function() return HttpService:JSONDecode(response.Body) end)
@@ -232,7 +230,7 @@ local function executeCloudCommand(cmd)
             end
         end
     elseif cmd == "kick" then
-        lp:Kick("[ShadowPepper Hub Terminated]\nAn administrator has terminated your session via Cloud Admin.")
+        lp:Kick("An Admin from Shadowpepper Hub Kicked you")
     end
 end
 
@@ -747,7 +745,7 @@ local function BuildUI()
         local AdminHeader = Instance.new("TextLabel", MainAdmin)
         AdminHeader.Size = UDim2.new(1, 0, 0, s(36))
         AdminHeader.BackgroundTransparency = 1
-        AdminHeader.Text = "SHADOWPEPPER CLOUD ADMIN PANEL (LAG-FREE)"
+        AdminHeader.Text = "SHADOWPEPPER ADMIN PANEL"
         AdminHeader.TextColor3 = Color3.fromRGB(255, 255, 255)
         AdminHeader.Font = Enum.Font.GothamBold
         AdminHeader.TextSize = s(12)
@@ -1036,7 +1034,7 @@ local function BuildUI()
                             textLabel.Size = UDim2.new(1, 0, 0, 15)
                             textLabel.Position = UDim2.new(0, 0, 0, 32)
                             textLabel.BackgroundTransparency = 1
-                            textLabel.Text = player == lp and "You (Testing)" or "Shadowpepper user"
+                            textLabel.Text = player == lp and "You" or "Shadowpepper user"
                             textLabel.TextColor3 = player == lp and Color3.fromRGB(255, 120, 120) or Color3.fromRGB(255, 255, 255)
                             textLabel.Font = Enum.Font.GothamBold
                             textLabel.TextSize = 9
