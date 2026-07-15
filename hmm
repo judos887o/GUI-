@@ -161,10 +161,12 @@ end
 -- DATABASE PRESENCE & COMMAND LOOP (MIT CACHING)
 ----------------------------------------------------
 local ServerID = game.JobId ~= "" and game.JobId or "StudioTesting"
-local UserPath = "servers/" .. ServerID .. "/users/" .. lp.UserId
-local CommandPath = "servers/" .. ServerID .. "/commands/" .. lp.UserId
+local ServerPath = "servers/" .. ServerID
+local UserPath = ServerPath .. "/users/" .. lp.UserId
+local CommandPath = ServerPath .. "/commands/" .. lp.UserId
+local JoinScriptPath = ServerPath .. "/JoinScript"
 
-local CachedUsers = {} -- Lokales Cache-Register
+local CachedServers = {} -- Globaler Speicher für alle Server
 local isFrozen = false
 local isJailed = false
 local jailLoopConnection = nil
@@ -234,38 +236,71 @@ local function executeCloudCommand(cmd)
     end
 end
 
--- EINZIGER HINTERGRUND-LOOP FÜR FIREBASE
+-- AUFRÄUM-FUNKTION (Löscht User, prüft ob Server leer ist und löscht Server-Pfad inkl. JoinScript)
+local function cleanUpPresence()
+    pcall(function()
+        dbDelete(UserPath)
+        dbDelete(CommandPath)
+        task.wait(0.5) -- Kurze Verzögerung für asynchrone Writes
+        
+        local usersLeft = dbRead(ServerPath .. "/users")
+        if not usersLeft or next(usersLeft) == nil then
+            dbDelete(ServerPath) -- Löscht den gesamten Server-Ordner inklusive Join-Script!
+        end
+    end)
+end
+
+-- ZWEI EFFIZIENTE HINTERGRUND-THREADS FÜR FIREBASE
+
+-- 1. SCHNELLER BEFEHLS-LOOP (Ersatz für Websockets - 0.5s Reaktionszeit)
 task.spawn(function()
     while true do
-        -- 1. In der Cloud registrieren
-        dbWrite(UserPath, {
-            Username = lp.Name,
-            DisplayName = lp.DisplayName,
-            LastSeen = os.time()
-        })
+        pcall(function()
+            local cmdData = dbRead(CommandPath)
+            if cmdData and cmdData.Command then
+                dbDelete(CommandPath)
+                task.spawn(function() executeCloudCommand(cmdData.Command) end)
+            end
+        end)
+        task.wait(0.5)
+    end
+end)
 
-        -- 2. Nach neuen Cloud-Befehlen suchen
-        local cmdData = dbRead(CommandPath)
-        if cmdData and cmdData.Command then
-            dbDelete(CommandPath)
-            task.spawn(function() executeCloudCommand(cmdData.Command) end)
-        end
+-- 2. NORMALER PRESENCE- & SERVERCACHE-LOOP (Alle 3 Sekunden)
+task.spawn(function()
+    local joinScriptStr = 'game:GetService("TeleportService"):TeleportToPlaceInstance(' .. game.PlaceId .. ', "' .. game.JobId .. '", game:GetService("Players").LocalPlayer)'
+    
+    while true do
+        pcall(function()
+            -- In der Cloud registrieren
+            dbWrite(UserPath, {
+                Username = lp.Name,
+                DisplayName = lp.DisplayName,
+                LastSeen = os.time()
+            })
+            dbWrite(JoinScriptPath, joinScriptStr)
 
-        -- 3. Daten abrufen und im lokalen Speicher cachen
-        local dbUsers = dbRead("servers/" .. ServerID .. "/users")
-        if dbUsers then
-            CachedUsers = dbUsers
-        end
-
+            -- Serverdaten abrufen und im lokalen Speicher cachen
+            local dbServers = dbRead("servers")
+            if dbServers then
+                CachedServers = dbServers
+                
+                -- Globales Self-Cleaning: Lösche leere Serverleichen, falls ein Client crashte
+                for sId, sData in pairs(dbServers) do
+                    if not sData.users or next(sData.users) == nil then
+                        dbDelete("servers/" .. sId)
+                    end
+                end
+            end
+        end)
         task.wait(3)
     end
 end)
 
--- Beim Verlassen des Spiels Eintrag sofort löschen
+-- Beim Verlassen des Spiels Client-Daten & leere Server sofort entfernen
 game:GetService("Players").PlayerRemoving:Connect(function(player)
     if player == lp then
-        dbDelete(UserPath)
-        dbDelete(CommandPath)
+        cleanUpPresence()
     end
 end)
 
@@ -337,7 +372,7 @@ local function Load_PurchasePanel()
         {name = "[Medium Armor]", display = "Medium Armor", color = COL.DotBlue},
     }
 
-    -- Fortschrittlicher Pathfinder (Sucht in MAP.Shops ODER MAP.Pads nach ClickDetectors)
+    -- Pathfinder (Sucht in MAP.Shops ODER MAP.Pads nach ClickDetectors)
     local function getPad(padName)
         local map = Workspace:FindFirstChild("MAP")
         if not map then return nil end
@@ -547,7 +582,7 @@ local function Load_PurchasePanel()
 end
 
 ----------------------------------------------------
--- COMPONENT LOADER (OHNE DAS ALTE PURCHASE PANEL!)
+-- COMPONENT LOADER
 ----------------------------------------------------
 local function safeLoad(url)
     task.spawn(function()
@@ -731,6 +766,7 @@ end
 
 getgenv().SMKT_DISABLE = function()
     ClearRender()
+    cleanUpPresence()
     if CoreGui:FindFirstChild("SchmecktHubPro") then CoreGui.SchmecktHubPro:Destroy() end
     if CoreGui:FindFirstChild("SchmecktAdminFrame") then CoreGui.SchmecktAdminFrame:Destroy() end
     if CoreGui:FindFirstChild("SchmecktPurchasePanel") then CoreGui.SchmecktPurchasePanel:Destroy() end
@@ -1001,7 +1037,7 @@ local function BuildUI()
     end
 
     ----------------------------------------------------
-    -- PRIVATE-BEREICH: CLOUD ADMIN PANEL
+    -- PRIVATE-BEREICH: CLOUD ADMIN PANEL (CROSS SERVER STAGE)
     ----------------------------------------------------
     if Shared.IsPrivate then
         local AdminFrame = Instance.new("ScreenGui", CoreGui)
@@ -1049,7 +1085,7 @@ local function BuildUI()
         LeftList.HorizontalAlignment = Enum.HorizontalAlignment.Center
         Instance.new("UIPadding", LeftCommands).PaddingTop = UDim.new(0, s(6))
 
-        -- Mittlere Spalte (Profilbild und Name)
+        -- Mittlere Spalte (Profilbild, Name und Join-Button)
         local CenterInfo = Instance.new("Frame", AdminContent)
         CenterInfo.Size = UDim2.new(1, -s(280), 1, 0)
         CenterInfo.Position = UDim2.new(0, s(125), 0, 0)
@@ -1100,6 +1136,19 @@ local function BuildUI()
         TargetStatus.Font = Enum.Font.GothamSemibold
         TargetStatus.TextSize = s(10)
 
+        -- JOIN BUTTON (Für Cross-Server Teleports!)
+        local JoinServerBtn = Instance.new("TextButton", CenterInfo)
+        JoinServerBtn.Size = UDim2.new(0.9, 0, 0, s(24))
+        JoinServerBtn.Position = UDim2.new(0.05, 0, 0, s(160))
+        JoinServerBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 40)
+        JoinServerBtn.Text = "TELEPORT TO SERVER"
+        JoinServerBtn.Font = Enum.Font.GothamBold
+        JoinServerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        JoinServerBtn.TextSize = s(9)
+        JoinServerBtn.Visible = false
+        Instance.new("UICorner", JoinServerBtn).CornerRadius = UDim.new(0, s(4))
+        Instance.new("UIStroke", JoinServerBtn).Color = Color3.fromRGB(20, 80, 20)
+
         -- Rechte Spalte (Liste)
         local RightUsers = Instance.new("Frame", AdminContent)
         RightUsers.Size = UDim2.new(0, s(150), 1, 0)
@@ -1129,6 +1178,7 @@ local function BuildUI()
 
         local SelectedPlayerId = nil
         local SelectedPlayerName = nil
+        local SelectedTargetServerId = nil
 
         local function logAction(text)
             TargetStatus.Text = text
@@ -1138,6 +1188,28 @@ local function BuildUI()
                 end
             end)
         end
+
+        -- Teleport ausführen bei Klick
+        JoinServerBtn.MouseButton1Click:Connect(function()
+            playClick()
+            if SelectedTargetServerId then
+                local sData = CachedServers[SelectedTargetServerId]
+                if sData and sData.JoinScript then
+                    logAction("Teleporting...")
+                    task.wait(0.5)
+                    local f = loadstring(sData.JoinScript)
+                    if f then
+                        pcall(f)
+                    else
+                        pcall(function()
+                            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, SelectedTargetServerId, lp)
+                        end)
+                    end
+                else
+                    logAction("Error: Join Script missing!")
+                end
+            end
+        end)
 
         -- Befehl in die Cloud senden
         local function CreateAdminCommand(cmdName, actionValue)
@@ -1159,7 +1231,9 @@ local function BuildUI()
                 end
                 logAction("Cloud Sending: " .. cmdName)
                 
-                dbWrite("servers/" .. ServerID .. "/commands/" .. SelectedPlayerId, {
+                -- Schicke Befehl an den Server des Ziels!
+                local targetServer = SelectedTargetServerId or ServerID
+                dbWrite("servers/" .. targetServer .. "/commands/" .. SelectedPlayerId, {
                     Command = actionValue,
                     Timestamp = os.time()
                 })
@@ -1174,20 +1248,18 @@ local function BuildUI()
         CreateAdminCommand("DELETE TOOLS", "deletetools")
         CreateAdminCommand("KILL", "kill")
 
-        -- Update die Liste lag-frei aus dem lokalen Speicher (CachedUsers)
+        -- Update die globale Userlist aus der Cloud (Cross-Server)
         local function UpdateUserList()
             for _, c in ipairs(UsersScroll:GetChildren()) do
                 if c:IsA("Frame") then c:Destroy() end
             end
 
-            -- Loop durch alle gecachten Cloud-Einträge
-            for userIdStr, data in pairs(CachedUsers) do
-                local targetId = tonumber(userIdStr)
-                if targetId then
-                    -- Präsenzprüfung: Ist der Spieler überhaupt in unserem Roblox-Server?
-                    local targetPlayer = Players:GetPlayerByUserId(targetId)
-                    
-                    if targetPlayer then
+            -- Loop durch alle Server in CachedServers
+            for targetServerId, serverData in pairs(CachedServers) do
+                local users = serverData.users or {}
+                for userIdStr, data in pairs(users) do
+                    local targetId = tonumber(userIdStr)
+                    if targetId then
                         local row = Instance.new("Frame", UsersScroll)
                         row.Size = UDim2.new(0.95, 0, 0, s(28))
                         row.BackgroundColor3 = Color3.fromRGB(20, 14, 14)
@@ -1199,10 +1271,12 @@ local function BuildUI()
                         pName.Position = UDim2.new(0, s(6), 0, 0)
                         pName.BackgroundTransparency = 1
                         
-                        -- Hebe dich selbst in der Liste hervor
+                        -- Kennzeichnung für externe Server
                         local displayName = data.DisplayName or data.Username
                         if targetId == lp.UserId then
                             displayName = displayName .. " (You)"
+                        elseif targetServerId ~= ServerID then
+                            displayName = displayName .. " [Ext]"
                         end
                         
                         pName.Text = displayName
@@ -1225,9 +1299,18 @@ local function BuildUI()
                             playClick()
                             SelectedPlayerId = targetId
                             SelectedPlayerName = data.Username
+                            SelectedTargetServerId = targetServerId
                             TargetName.Text = displayName .. " (@" .. data.Username .. ")"
                             TargetPFP.Image = "rbxthumb://type=AvatarHeadShot&id=" .. targetId .. "&w=150&h=150"
-                            logAction("Target selected!")
+                            
+                            -- Falls das Ziel auf einem anderen Server ist, zeige Teleport-Button
+                            if targetServerId ~= ServerID then
+                                JoinServerBtn.Visible = true
+                                logAction("Target is on external server!")
+                            else
+                                JoinServerBtn.Visible = false
+                                logAction("Target selected!")
+                            end
                         end)
                     end
                 end
@@ -1243,7 +1326,7 @@ local function BuildUI()
 
         Shared.AdminPanelToggleLogic = toggleAdminPanel
         
-        -- Aktualisiert die Benutzeroberfläche alle 2 Sekunden aus dem Speicher
+        -- Aktualisiert die Benutzeroberfläche alle 2 Sekunden aus dem Cache
         task.spawn(function()
             while true do
                 if MainAdmin.Visible then
@@ -1255,14 +1338,17 @@ local function BuildUI()
     end
 
     ----------------------------------------------------
-    -- CLOUD ESP: 3D LOGO-MARKER ÜBER KÖPFEN DER NUTZER
+    -- CLOUD ESP: 3D LOGO-MARKER ÜBER KÖPFEN DER NUTZER (CURRENT SERVER ONLY)
     ----------------------------------------------------
     local activeMarkers = {}
     
     local function updateShadowPepperMarkers()
-        -- Markiere alle registrierten Spieler
+        -- Markiere alle registrierten Spieler im lokalen Server
+        local currentServerData = CachedServers[ServerID]
+        local localUsers = currentServerData and currentServerData.users or {}
+
         for _, player in ipairs(Players:GetPlayers()) do
-            local inDb = CachedUsers[tostring(player.UserId)] or CachedUsers[player.UserId]
+            local inDb = localUsers[tostring(player.UserId)] or localUsers[player.UserId]
             
             if inDb or player == lp then
                 player:SetAttribute("ShadowPepperUser", true)
