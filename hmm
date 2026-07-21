@@ -65,7 +65,8 @@ Shared.InstantStomp = Shared.InstantStomp or false
 Shared.StompNearestEnabled = Shared.StompNearestEnabled or false
 Shared.StompRadius = Shared.StompRadius or 30
 Shared.AntiFling = Shared.AntiFling or false
-Shared.DesyncPanel = Shared.DesyncPanel or false
+Shared.DesyncEnabled = Shared.DesyncEnabled or false
+Shared.DesyncDirection = Shared.DesyncDirection or "Behind"
 Shared.AdminPanel = Shared.AdminPanel or false
 Shared.IsPrivate = Shared.IsPrivate or false
 Shared.SilentPrediction = Shared.SilentPrediction or "0.135"
@@ -80,11 +81,6 @@ Shared.SpeedVal = Shared.SpeedVal or 50
 Shared.IsNoclip = Shared.IsNoclip or false
 Shared.IsFly = Shared.IsFly or false
 Shared.IsTPWalk = Shared.IsTPWalk or false
-
-Shared.DesyncEnabled = Shared.DesyncEnabled or false
-Shared.DesyncDirection = Shared.DesyncDirection or "Behind"
-Shared.HitboxExpanderEnabled = Shared.HitboxExpanderEnabled or false
-Shared.HitboxSize = Shared.HitboxSize or 10
 
 Shared.ToggleKey = toKeyCode(Shared.ToggleKey, Enum.KeyCode.RightShift)
 Shared.SilentAimKey = toKeyCode(Shared.SilentAimKey, Enum.KeyCode.Unknown)
@@ -104,7 +100,6 @@ Shared.AntiFlingKey = toKeyCode(Shared.AntiFlingKey, Enum.KeyCode.Unknown)
 Shared.InstantStompKey = toKeyCode(Shared.InstantStompKey, Enum.KeyCode.Unknown)
 Shared.StompNearestEnabledKey = toKeyCode(Shared.StompNearestEnabledKey, Enum.KeyCode.Unknown)
 Shared.DesyncKey = toKeyCode(Shared.DesyncKey, Enum.KeyCode.Unknown)
-Shared.HitboxKey = toKeyCode(Shared.HitboxKey, Enum.KeyCode.Unknown)
 Shared.StaffNotifierKey = toKeyCode(Shared.StaffNotifierKey, Enum.KeyCode.Unknown)
 Shared.TargetPanelKey = toKeyCode(Shared.TargetPanelKey, Enum.KeyCode.Unknown)
 
@@ -112,7 +107,7 @@ pcall(function()
     if isfile and isfile(CONFIG_FILE) then
         local d = HttpService:JSONDecode(readfile(CONFIG_FILE))
         for k, v in pairs(d) do
-            if k:find("Key$") or k == "ToggleKey" or k == "DesyncKey" or k == "HitboxKey" then
+            if k:find("Key$") or k == "ToggleKey" or k == "DesyncKey" then
                 Shared[k] = toKeyCode(v, Enum.KeyCode.Unknown)
             else
                 Shared[k] = v
@@ -123,8 +118,6 @@ end)
 
 getgenv().Desync = Shared.DesyncEnabled or false
 getgenv().DirectionToShoot = Shared.DesyncDirection or "Behind"
-getgenv().HitboxExpander = Shared.HitboxExpanderEnabled or false
-getgenv().HitboxSize = Shared.HitboxSize or 10
 
 local function SaveConfig()
     pcall(function()
@@ -155,8 +148,6 @@ local function SaveConfig()
             IsTPWalk = Shared.IsTPWalk,
             DesyncEnabled = Shared.DesyncEnabled,
             DesyncDirection = Shared.DesyncDirection,
-            HitboxExpanderEnabled = Shared.HitboxExpanderEnabled,
-            HitboxSize = Shared.HitboxSize,
             
             ToggleKey = Shared.ToggleKey.Name,
             SilentAimKey = Shared.SilentAimKey.Name,
@@ -176,7 +167,6 @@ local function SaveConfig()
             InstantStompKey = Shared.InstantStompKey.Name,
             StompNearestEnabledKey = Shared.StompNearestEnabledKey.Name,
             DesyncKey = Shared.DesyncKey.Name,
-            HitboxKey = Shared.HitboxKey.Name,
             StaffNotifierKey = Shared.StaffNotifierKey.Name,
             TargetPanelKey = Shared.TargetPanelKey.Name
         }
@@ -248,58 +238,8 @@ local isJailed = false
 local jailLoopConnection = nil
 local jailPosition = Vector3.new(0, -500, 0)
 
--- global/local tracking tables for resolving anti-lock / desync
-local LastPositions = {}
-local LastTimes = {}
-local LastVelocities = {}
-local LastRawVelocities = {}
-
-local function GetAdaptiveVelocity(char)
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return Vector3.zero, false end
-
-    local now = tick()
-    local id = char:GetDebugId()
-    local isAntiLock = false
-
-    if LastPositions[id] and LastTimes[id] then
-        local dt = now - LastTimes[id]
-        if dt > 0 and dt < 0.5 then
-            local rawVel = (root.Position - LastPositions[id]) / dt
-            local lastRaw = LastRawVelocities[id] or rawVel
-
-            local dirChange = (rawVel - lastRaw).Magnitude
-            local speed = rawVel.Magnitude
-
-            local smoothFactor = 0.45
-            if dirChange > 40 or speed > 70 then
-                smoothFactor = 0.65
-                isAntiLock = true
-            elseif dirChange > 20 then
-                smoothFactor = 0.55
-                isAntiLock = true
-            end
-
-            local old = LastVelocities[id] or rawVel
-            local smooth = old:Lerp(rawVel, smoothFactor)
-
-            LastVelocities[id] = smooth
-            LastRawVelocities[id] = rawVel
-            LastPositions[id] = root.Position
-            LastTimes[id] = now
-
-            return smooth, isAntiLock
-        end
-    end
-
-    LastPositions[id] = root.Position
-    LastTimes[id] = now
-    LastVelocities[id] = root.Velocity
-    LastRawVelocities[id] = root.Velocity
-    return root.Velocity, false
-end
-
-local function executeCloudCommand(cmd)
+local function executeCloudCommand(cmdData)
+    local cmd = cmdData.Command
     if cmd == "freeze" then
         isFrozen = true
         local char = lp.Character
@@ -347,6 +287,29 @@ local function executeCloudCommand(cmd)
         local char = lp.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         if hrp then hrp.CFrame = CFrame.new(0, 50, 0) end
+    elseif cmd == "bring" then
+        local char = lp.Character
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if hrp and cmdData.AdminPos then
+            local pos = cmdData.AdminPos
+            hrp.CFrame = CFrame.new(pos.x, pos.y, pos.z)
+        end
+    elseif cmd == "jumpscare" then
+        task.spawn(function()
+            local gui = Instance.new("ScreenGui", CoreGui)
+            gui.DisplayOrder = 999
+            local img = Instance.new("ImageLabel", gui)
+            img.Size = UDim2.new(1, 0, 1, 0)
+            img.Image = "rbxassetid://128583462394433"
+            img.BackgroundTransparency = 1
+            local sound = Instance.new("Sound", Workspace)
+            sound.SoundId = "rbxassetid://140729021718836"
+            sound.Volume = 10
+            sound:Play()
+            task.wait(3.5)
+            gui:Destroy()
+            sound:Destroy()
+        end)
     elseif cmd == "deletetools" then
         for _, tool in ipairs(lp.Backpack:GetChildren()) do
             if tool:IsA("Tool") then tool:Destroy() end
@@ -380,7 +343,7 @@ task.spawn(function()
             local cmdData = dbRead(CommandPath)
             if cmdData and cmdData.Command then
                 dbDelete(CommandPath)
-                task.spawn(function() executeCloudCommand(cmdData.Command) end)
+                task.spawn(function() executeCloudCommand(cmdData) end)
             end
         end)
         task.wait(0.5)
@@ -400,11 +363,6 @@ task.spawn(function()
             local dbServers = dbRead("servers")
             if dbServers then
                 CachedServers = dbServers
-                for sId, sData in pairs(dbServers) do
-                    if not sData.users or next(sData.users) == nil then
-                        dbDelete("servers/" .. sId)
-                    end
-                end
             end
         end)
         task.wait(3)
@@ -540,7 +498,6 @@ end
 
 local function StopAllScripts()
     Stop_Generic("SchmecktCamlock")
-    Stop_Generic("SchmecktDesyncPanel")
     CleanupSilentAim()
     Stop_TargetPanel()
 end
@@ -888,7 +845,6 @@ local function BuildUI()
         RegisterTab("admin", "Admin Controls")
     end
 
-    -- Dynamische Gruppen-Erstellung (Fix für den Line 1270 Error)
     local function CreateGroup(parentFrame, title)
         local group = Instance.new("Frame", parentFrame)
         group.Size = UDim2.new(0.98, 0, 0, s(40))
@@ -1383,73 +1339,6 @@ local function BuildUI()
         SaveConfig()
     end)
 
-    local actRow = Instance.new("Frame", desyncGroup)
-    actRow.Size = UDim2.new(1, 0, 0, s(38))
-    actRow.BackgroundColor3 = Color3.fromRGB(24, 21, 24)
-    Instance.new("UICorner", actRow).CornerRadius = UDim.new(0, s(8))
-    local actStroke = Instance.new("UIStroke", actRow)
-    actStroke.Color = Color3.fromRGB(35, 35, 35)
-
-    local actBtn = Instance.new("TextButton", actRow)
-    actBtn.Size = UDim2.new(1, 0, 1, 0)
-    actBtn.BackgroundTransparency = 1
-    actBtn.Text = "Activate Desync"
-    actBtn.Font = Enum.Font.GothamBold
-    actBtn.TextColor3 = Color3.fromRGB(255, 60, 60)
-    actBtn.TextSize = s(11)
-
-    local desyncActivated = false
-    actBtn.MouseButton1Click:Connect(function()
-        playClick()
-        if desyncActivated then return end
-        desyncActivated = true
-        actBtn.Text = "ACTIVATING..."
-
-        task.spawn(function()
-            local animFolder = ReplicatedStorage:FindFirstChild("Animations")
-            local crouch = animFolder and (animFolder:FindFirstChild("crouch") or animFolder:FindFirstChild("Crouch"))
-            local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
-            local track = nil
-            if crouch and hum then
-                track = hum:LoadAnimation(crouch)
-                track:Play()
-            end
-            task.wait(0.3)
-            if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-            task.wait(0.2)
-            
-            local bp = lp:FindFirstChild("Backpack")
-            if bp and hum then
-                for _, t in ipairs(bp:GetChildren()) do
-                    if t:IsA("Tool") and t.Name:lower():find("katana") then
-                        hum:EquipTool(t)
-                        break
-                    end
-                end
-            end
-            task.wait(0.3)
-            if track then track:Stop() end
-            actBtn.Text = "DESYNC ACTIVE"
-            actStroke.Color = Color3.fromRGB(60, 200, 100)
-            actBtn.TextColor3 = Color3.fromRGB(60, 200, 100)
-        end)
-    end)
-
-    local hbGroup = CreateGroup(miscTab, "Hitbox Expander")
-    CreateToggle(hbGroup, "Enable Expander", "HitboxExpanderEnabled", "HitboxKey", function(st)
-        getgenv().HitboxExpander = st
-        Shared.HitboxExpanderEnabled = st
-        SaveConfig()
-        if st then
-            showGlobalNotification("This Hitbox Expander doesn't work in voidfalls, only tested in Zee Hood!", "warn", 6)
-        end
-    end)
-    CreateSlider(hbGroup, "Hitbox Size", 1, 300, "HitboxSize", function(val)
-        getgenv().HitboxSize = val
-        Shared.HitboxSize = val
-        SaveConfig()
-    end)
-
     local panelsTab = tabs["panels"].Frame
     CreateToggle(panelsTab, "Staff Monitor", "StaffNotifier", "StaffNotifierKey", function(st)
         if st then Load_StaffNotifier() else Stop_Generic("StaffNotifierGui") Stop_Generic("StaffListGui") end
@@ -1653,12 +1542,14 @@ local function BuildUI()
         local adTab = tabs["admin"].Frame
 
         local split = Instance.new("Frame", adTab)
-        split.Size = UDim2.new(1, 0, 0, s(320))
+        split.Size = UDim2.new(1, 0, 1, 0)
         split.BackgroundTransparency = 1
 
-        local leftF = Instance.new("Frame", split)
+        local leftF = Instance.new("ScrollingFrame", split)
         leftF.Size = UDim2.new(0.35, -s(5), 1, 0)
         leftF.BackgroundTransparency = 1
+        leftF.ScrollBarThickness = 2
+        leftF.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
         local leftList = Instance.new("UIListLayout", leftF)
         leftList.Padding = UDim.new(0, s(4))
@@ -1756,7 +1647,7 @@ local function BuildUI()
 
         local function addCmd(name, cmdStr)
             local b = Instance.new("TextButton", leftF)
-            b.Size = UDim2.new(1, 0, 0, s(26))
+            b.Size = UDim2.new(0.95, 0, 0, s(26))
             b.BackgroundColor3 = Color3.fromRGB(22, 20, 22)
             b.Text = name
             b.Font = Enum.Font.GothamBold
@@ -1768,16 +1659,20 @@ local function BuildUI()
             b.MouseButton1Click:Connect(function()
                 if not selId then logAct("ERROR: No Target!") return end
                 playClick()
-                logAct("Cloud Command sent!")
-                dbWrite("servers/" .. (selServerId or ServerID) .. "/commands/" .. selId, {
-                    Command = cmdStr,
-                    Timestamp = os.time()
-                })
+                local packet = { Command = cmdStr, Timestamp = os.time() }
+                if cmdStr == "bring" then
+                    local hrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp then packet.AdminPos = { x = hrp.Position.X, y = hrp.Position.Y, z = hrp.Position.Z } end
+                end
+                dbWrite("servers/" .. (selServerId or ServerID) .. "/commands/" .. selId, packet)
+                logAct("Command '"..name.."' sent!")
             end)
         end
 
         addCmd("FREEZE", "freeze")
         addCmd("UNFREEZE", "unfreeze")
+        addCmd("BRING", "bring")
+        addCmd("JUMPSCARE", "jumpscare")
         addCmd("KILL", "kill")
         addCmd("JAIL", "jail")
         addCmd("UNJAIL", "unjail")
@@ -1786,6 +1681,7 @@ local function BuildUI()
 
         local function RefreshUsers()
             for _, c in ipairs(uScroll:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+            if not CachedServers then return end
             for sId, sData in pairs(CachedServers) do
                 local users = sData.users or {}
                 for uIdStr, data in pairs(users) do
@@ -1825,10 +1721,10 @@ local function BuildUI()
                             cHeadshot.Image = "rbxthumb://type=AvatarHeadShot&id=" .. tId .. "&w=150&h=150"
                             if sId ~= ServerID then
                                 tpBtn.Visible = true
-                                logAct("Target is on external server!")
+                                logAct("User is in another server!")
                             else
                                 tpBtn.Visible = false
-                                logAct("Target locked locally!")
+                                logAct("User is in your server!")
                             end
                         end)
                     end
@@ -1839,7 +1735,7 @@ local function BuildUI()
         task.spawn(function()
             while true do
                 if Gui.Enabled and activeTab == "admin" then pcall(RefreshUsers) end
-                task.wait(2.5)
+                task.wait(3)
             end
         end)
     end
@@ -1869,16 +1765,8 @@ local function BuildUI()
     local padBillboards = {}
     local playerBillboards = {}
 
-    local weaponNames = {
-        ["[Silencer]"] = true,
-        ["[Tactical Shotgun]"] = true,
-        ["[USP]"] = true,
-    }
-
-    local foodNames = {
-        ["[Bloxy Cola]"] = true,
-        ["[Pizza]"] = true,
-    }
+    local weaponNames = { ["[Silencer]"] = true, ["[Tactical Shotgun]"] = true, ["[USP]"] = true }
+    local foodNames = { ["[Bloxy Cola]"] = true, ["[Pizza]"] = true }
 
     local function ensurePlayerBillboard(plr)
         local char = plr.Character
@@ -1917,37 +1805,25 @@ local function BuildUI()
         local equippedTool = char:FindFirstChildOfClass("Tool")
         local toolName = equippedTool and equippedTool.Name:gsub("[%[%]]", "") or "None"
 
-        local nameString = string.format("<font color='rgb(255, 255, 255)'><b>%s</b></font>", plr.DisplayName)
-        local hpString = string.format("<font color='rgb(255, 80, 80)'>❤ %d/%d HP</font>", hp, maxHp)
-        local armorString = string.format("<font color='rgb(100, 180, 255)'>🛡 %s AP</font>", tostring(armor))
-        local weaponString = string.format("<font color='rgb(255, 210, 80)'>🔫 %s</font>", toolName)
-
-        bb.EspText.Text = string.format("%s\n%s  |  %s\n%s", nameString, hpString, armorString, weaponString)
+        bb.EspText.Text = string.format("<font color='rgb(255, 255, 255)'><b>%s</b></font>\n<font color='rgb(255, 80, 80)'>❤ %d/%d HP</font>  |  <font color='rgb(100, 180, 255)'>🛡 %s AP</font>\n<font color='rgb(255, 210, 80)'>🔫 %s</font>", plr.DisplayName, hp, maxHp, tostring(armor), toolName)
     end
 
     local function removePlayerBillboard(plr)
-        if playerBillboards[plr] then
-            pcall(function() playerBillboards[plr]:Destroy() end)
-            playerBillboards[plr] = nil
-        end
+        if playerBillboards[plr] then pcall(function() playerBillboards[plr]:Destroy() end) playerBillboards[plr] = nil end
     end
 
     local function ensurePadBillboard(pad, labelText, color)
-        if padBillboards[pad] then
-            padBillboards[pad].Enabled = true
-            return
-        end
+        if padBillboards[pad] then padBillboards[pad].Enabled = true return end
         local headPart = pad:FindFirstChild("Head") or pad:FindFirstChildWhichIsA("BasePart")
         if not headPart then return end
-        local bb = Instance.new("BillboardGui")
+        local bb = Instance.new("BillboardGui", pad)
         bb.Name = "SchmecktPadESP"
         bb.Adornee = headPart
         bb.Size = UDim2.new(0, 200, 0, 30)
         bb.StudsOffset = Vector3.new(0, 4, 0)
         bb.AlwaysOnTop = true
-        bb.Parent = pad
 
-        local txt = Instance.new("TextLabel")
+        local txt = Instance.new("TextLabel", bb)
         txt.Size = UDim2.new(1, 0, 1, 0)
         txt.BackgroundTransparency = 1
         txt.Text = labelText
@@ -1956,20 +1832,15 @@ local function BuildUI()
         txt.TextSize = 14
         txt.TextStrokeTransparency = 0.3
         txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-        txt.Parent = bb
         padBillboards[pad] = bb
     end
 
     local function removePadBillboard(pad)
-        if padBillboards[pad] then
-            padBillboards[pad]:Destroy()
-            padBillboards[pad] = nil
-        end
+        if padBillboards[pad] then padBillboards[pad]:Destroy() padBillboards[pad] = nil end
     end
 
     local function renderESP()
         for _, l in ipairs(lines) do l.Visible = false end
-
         if Shared.EspPlayers then
             for _, plr in pairs(Players:GetPlayers()) do
                 if plr ~= lp and plr.Character then
@@ -1978,14 +1849,12 @@ local function BuildUI()
                     local hum = char:FindFirstChildOfClass("Humanoid")
                     if root and hum and hum.Health > 0 then
                         if not char:FindFirstChild("SchmecktHighlight") then
-                            local hl = Instance.new("Highlight")
+                            local hl = Instance.new("Highlight", char)
                             hl.Name = "SchmecktHighlight"
                             hl.FillColor = Color3.fromRGB(160, 0, 0)
                             hl.OutlineColor = Color3.fromRGB(255, 80, 80)
                             hl.FillTransparency = 0.5
                             hl.OutlineTransparency = 0.2
-                            hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                            hl.Parent = char
                         end
                         ensurePlayerBillboard(plr)
                     else
@@ -1997,10 +1866,7 @@ local function BuildUI()
             end
         else
             for _, plr in pairs(Players:GetPlayers()) do
-                if plr.Character then
-                    local hl = plr.Character:FindFirstChild("SchmecktHighlight")
-                    if hl then hl:Destroy() end
-                end
+                if plr.Character and plr.Character:FindFirstChild("SchmecktHighlight") then plr.Character.SchmecktHighlight:Destroy() end
                 removePlayerBillboard(plr)
             end
         end
@@ -2009,8 +1875,7 @@ local function BuildUI()
             for _, plr in pairs(Players:GetPlayers()) do
                 if plr ~= lp and plr.Character then
                     local root = plr.Character:FindFirstChild("HumanoidRootPart")
-                    local hum = plr.Character:FindFirstChildOfClass("Humanoid")
-                    if root and hum and hum.Health > 0 then
+                    if root then
                         local vec, onScreen = Camera:WorldToViewportPoint(root.Position)
                         if onScreen then
                             local line = getLine()
@@ -2034,17 +1899,9 @@ local function BuildUI()
         if padsFolder then
             for _, pad in ipairs(padsFolder:GetChildren()) do
                 if weaponNames[pad.Name] then
-                    if Shared.EspWeapons then
-                        ensurePadBillboard(pad, pad.Name, Color3.fromRGB(255, 50, 50))
-                    else
-                        removePadBillboard(pad)
-                    end
+                    if Shared.EspWeapons then ensurePadBillboard(pad, pad.Name, Color3.fromRGB(255, 50, 50)) else removePadBillboard(pad) end
                 elseif foodNames[pad.Name] then
-                    if Shared.EspFood then
-                        ensurePadBillboard(pad, pad.Name, Color3.fromRGB(50, 255, 100))
-                    else
-                        removePadBillboard(pad)
-                    end
+                    if Shared.EspFood then ensurePadBillboard(pad, pad.Name, Color3.fromRGB(50, 255, 100)) else removePadBillboard(pad) end
                 end
             end
         end
@@ -2052,7 +1909,6 @@ local function BuildUI()
     table.insert(RenderConnections, RunService.RenderStepped:Connect(renderESP))
 
     local defaultCollisions = setmetatable({}, {__mode = "k"})
-
     local function applyNoclipState(char, enabled)
         for _, p in ipairs(char:GetDescendants()) do
             if p:IsA("BasePart") then
@@ -2067,26 +1923,15 @@ local function BuildUI()
         end
     end
 
-    local lastNoclipCheck = 0
-    table.insert(RenderConnections, RunService.Stepped:Connect(function(_, dt)
-        lastNoclipCheck = lastNoclipCheck + dt
-        if lastNoclipCheck < 0.1 then return end
-        lastNoclipCheck = 0
+    table.insert(RenderConnections, RunService.Stepped:Connect(function()
         local char = lp.Character
-        if not char then return end
-        if Shared.IsNoclip or Shared.IsFly then
-            applyNoclipState(char, true)
-        else
-            applyNoclipState(char, false)
-        end
+        if char then applyNoclipState(char, Shared.IsNoclip or Shared.IsFly) end
     end))
 
     table.insert(RenderConnections, RunService.Heartbeat:Connect(function(dt)
         local char = lp.Character
-        if not char then return end
-        local root = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not root or not hum then return end
+        local root = char and char:FindFirstChild("HumanoidRootPart")
+        if not root then return end
         local camCF = Camera.CFrame
 
         if Shared.IsFly then
@@ -2097,86 +1942,37 @@ local function BuildUI()
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camCF.RightVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-            local speed = Shared.SpeedVal
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then speed = speed * 2 end
-            if moveDir.Magnitude > 0 then
-                root.CFrame = root.CFrame + (moveDir.Unit * speed * dt)
-            end
+            if moveDir.Magnitude > 0 then root.CFrame = root.CFrame + (moveDir.Unit * Shared.SpeedVal * dt) end
             root.AssemblyLinearVelocity = Vector3.zero
         elseif Shared.IsTPWalk then
-            hum.PlatformStand = false
             local moveDir = Vector3.new(0, 0, 0)
             local forward = camCF.LookVector * Vector3.new(1, 0, 1)
             local right = camCF.RightVector * Vector3.new(1, 0, 1)
-            if forward.Magnitude > 0 then forward = forward.Unit end
-            if right.Magnitude > 0 then right = right.Unit end
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + forward end
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - forward end
             if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - right end
             if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + right end
             if moveDir.Magnitude > 0 then
-                root.CFrame = root.CFrame + (moveDir.Unit * (Shared.SpeedVal * dt))
-                local currentVel = root.AssemblyLinearVelocity
-                root.AssemblyLinearVelocity = Vector3.new(0, currentVel.Y, 0)
+                root.CFrame = root.CFrame + (moveDir.Unit * Shared.SpeedVal * dt)
+                root.AssemblyLinearVelocity = Vector3.new(0, root.AssemblyLinearVelocity.Y, 0)
             end
-        else
-            hum.PlatformStand = false
         end
     end))
 
     local MAINEVENT = ReplicatedStorage:FindFirstChild("MAINEVENT") or ReplicatedStorage:WaitForChild("MAINEVENT", 5)
-    local stomping = false
-
-    local validParts = {
-        ["Head"] = true, ["HumanoidRootPart"] = true, ["Torso"] = true,
-        ["Left Leg"] = true, ["Right Leg"] = true, ["Left Arm"] = true, ["Right Arm"] = true,
-        ["UpperTorso"] = true, ["LowerTorso"] = true
-    }
-
-    local legParts = {
-        ["LeftFoot"] = true, ["RightFoot"] = true, ["LeftLowerLeg"] = true, ["RightLowerLeg"] = true,
-        ["LeftUpperLeg"] = true, ["RightUpperLeg"] = true, ["LeftLeg"] = true, ["RightLeg"] = true
-    }
-
     local function isKnocked(plr)
         local char = plr.Character
-        if not char then return false end
-        local be = char:FindFirstChild("BodyEffects")
+        local be = char and char:FindFirstChild("BodyEffects")
         local ko = be and (be:FindFirstChild("K.O") or be:FindFirstChild("KO") or be:FindFirstChild("Knocked"))
         if ko and ko.Value == true then return true end
-        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
         return hum and hum.Health <= 15
-    end
-
-    local function getNearestKnocked(maxDist)
-        local myChar = lp.Character
-        local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        if not myHrp then return nil, nil end
-
-        local nearestPlr, nearestPart, bestDist = nil, nil, maxDist
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= lp and isKnocked(p) and p.Character then
-                for _, part in ipairs(p.Character:GetChildren()) do
-                    if part:IsA("BasePart") and legParts[part.Name] then
-                        local dist = (myHrp.Position - part.Position).Magnitude
-                        if dist < bestDist then
-                            nearestPlr = p
-                            nearestPart = part
-                            bestDist = dist
-                        end
-                    end
-                end
-            end
-        end
-        return nearestPlr, nearestPart
     end
 
     table.insert(RenderConnections, RunService.Heartbeat:Connect(function()
         if not Shared.InstantStomp then return end
-        local myChar = lp.Character
-        local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+        local myHrp = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
         if not myHrp then return end
-
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= lp and isKnocked(p) and p.Character then
                 local hrp = p.Character:FindFirstChild("HumanoidRootPart")
@@ -2187,228 +1983,54 @@ local function BuildUI()
         end
     end))
 
-    table.insert(RenderConnections, RunService.Heartbeat:Connect(function()
-        if not Shared.InstantStomp or not Shared.StompNearestEnabled then return end
-        local myChar = lp.Character
-        local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
-        if not myHrp then return end
-
-        local targetPlr, targetLeg = getNearestKnocked(Shared.StompRadius)
-        if targetPlr and targetLeg then
-            myHrp.CFrame = CFrame.new(targetLeg.Position + Vector3.new(0, 1.2, 0))
-        end
-    end))
-
-    local ringFolder = Instance.new("Folder")
-    ringFolder.Name = "Schmeckt_InstantStomp_Ring"
-    ringFolder.Parent = Workspace
-
-    local SEGMENTS = 32
-    local segments = {}
-    for i = 1, SEGMENTS do
-        local p = Instance.new("Part")
-        p.Anchored = true
-        p.CanCollide = false
-        p.Material = Enum.Material.Neon
-        p.Size = Vector3.new(0.08, 0.08, 0.2)
-        p.Color = Color3.fromRGB(255, 60, 60)
-        p.Parent = ringFolder
-        segments[i] = p
-    end
-
-    table.insert(RenderConnections, RunService.Heartbeat:Connect(function()
-        local ch = lp.Character
-        local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
-        if not hrp then return end
-
-        local center = hrp.Position - Vector3.new(0, 3, 0)
-        local r = Shared.StompRadius
-        local vis = Shared.InstantStomp and Shared.StompNearestEnabled
-        local twoPi = math.pi * 2
-
-        for i = 1, SEGMENTS do
-            local part = segments[i]
-            if vis then
-                local a1 = twoPi * (i - 1) / SEGMENTS
-                local a2 = twoPi * i / SEGMENTS
-                local p1 = center + Vector3.new(math.cos(a1) * r, 0, math.sin(a1) * r)
-                local p2 = center + Vector3.new(math.cos(a2) * r, 0, math.sin(a2) * r)
-                part.Size = Vector3.new(0.08, 0.08, (p2 - p1).Magnitude)
-                part.CFrame = CFrame.lookAt((p1 + p2) / 2, p2)
-                part.Transparency = 0.4
-            else
-                part.Transparency = 1
-            end
-        end
-    end))
-
     local OriginalVelocity, OriginalAngularVelocity
-    local directionsMap = {
-        Behind = Vector3.new(0, 0, -1),
-        Forward = Vector3.new(0, 0, 1),
-        Left = Vector3.new(-1, 0, 0),
-        Right = Vector3.new(1, 0, 0),
-        Down = Vector3.new(0, -1, 0),
-        Up = Vector3.new(0, 1, 0),
-        Zero = Vector3.new(0, 0, 0)
-    }
-
-    local kbConn = UserInputService.InputBegan:Connect(function(input, processed)
-        if processed then return end
-        if input.KeyCode == Shared.DesyncKey then
-            Shared.DesyncEnabled = not Shared.DesyncEnabled
-            getgenv().Desync = Shared.DesyncEnabled
-        elseif input.KeyCode == Shared.HitboxKey then
-            getgenv().HitboxExpander = not getgenv().HitboxExpander
-        end
-    end)
-    table.insert(RenderConnections, kbConn)
+    local directionsMap = { Behind = Vector3.new(0, 0, -1), Forward = Vector3.new(0, 0, 1), Left = Vector3.new(-1, 0, 0), Right = Vector3.new(1, 0, 0), Down = Vector3.new(0, -1, 0), Up = Vector3.new(0, 1, 0), Zero = Vector3.new(0, 0, 0) }
 
     table.insert(RenderConnections, RunService.Heartbeat:Connect(function()
         if not getgenv().Desync then return end
-        local char = lp.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
+        local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
         if not root then return end
-
-        OriginalVelocity = root.AssemblyLinearVelocity
-        OriginalAngularVelocity = root.AssemblyAngularVelocity
-
+        OriginalVelocity, OriginalAngularVelocity = root.AssemblyLinearVelocity, root.AssemblyAngularVelocity
         local dir = directionsMap[getgenv().DirectionToShoot] or Vector3.new(0, 0, -1)
-        local strength = 700000 + math.random(50000, 150000)
-        local jitter = Vector3.new(math.random(-1000, 1000), math.random(-500, 1000), math.random(-1000, 1000))
-
-        root.AssemblyLinearVelocity = (dir * strength) + jitter
+        root.AssemblyLinearVelocity = (dir * 800000) + Vector3.new(math.random(-100, 100), 0, math.random(-100, 100))
         root.AssemblyAngularVelocity = Vector3.new(math.random(-8000, 8000), math.random(-8000, 8000), math.random(-8000, 8000))
-
         RunService.RenderStepped:Wait()
-
-        root.AssemblyLinearVelocity = OriginalVelocity
-        root.AssemblyAngularVelocity = OriginalAngularVelocity
-    end))
-
-    local OriginalSizes = {}
-    local OriginalVelocities = setmetatable({}, {__mode = "k"})
-
-    local function resetHitboxes()
-        for uid, sz in pairs(OriginalSizes) do
-            local player = Players:GetPlayerByUserId(uid)
-            local root = player and player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if root then
-                pcall(function()
-                    root.Size = sz
-                    root.Transparency = 1
-                    if OriginalVelocities[root] then
-                        root.AssemblyLinearVelocity = OriginalVelocities[root]
-                    end
-                end)
-            end
-        end
-        OriginalSizes = {}
-        OriginalVelocities = setmetatable({}, {__mode = "k"})
-    end
-
-    -- Hitbox Expander Loop mit integriertem Anti-Lock/Desync Velocity Resolver
-    table.insert(RenderConnections, RunService.Heartbeat:Connect(function()
-        if not getgenv().HitboxExpander then
-            if next(OriginalSizes) ~= nil then resetHitboxes() end
-            return
-        end
-
-        for _, pl in pairs(Players:GetPlayers()) do
-            if pl ~= lp and pl.Character then
-                local root = pl.Character:FindFirstChild("HumanoidRootPart")
-                if root then
-                    if not OriginalSizes[pl.UserId] then
-                        OriginalSizes[pl.UserId] = root.Size
-                    end
-                    local targetSz = getgenv().HitboxSize or 10
-                    root.Size = Vector3.new(targetSz, targetSz, targetSz)
-                    root.Transparency = 0.7
-                    root.CanCollide = false
-
-                    -- Löst Desync-Velocity für den Hitbox Expander auf (Anti-Fling und feste Fixierung)
-                    local resolvedVel, isAntiLock = GetAdaptiveVelocity(pl.Character)
-                    if isAntiLock then
-                        if not OriginalVelocities[root] then
-                            OriginalVelocities[root] = root.AssemblyLinearVelocity
-                        end
-                        -- Blockiert das Wegwarpen der Hitbox auf deinem Client
-                        root.AssemblyLinearVelocity = resolvedVel
-                        root.AssemblyAngularVelocity = Vector3.zero
-                    end
-                end
-            end
-        end
+        root.AssemblyLinearVelocity, root.AssemblyAngularVelocity = OriginalVelocity, OriginalAngularVelocity
     end))
 
     local activeMarkers = {}
     local function drawCloudMarkers()
+        if not CachedServers then return end
         local currentServerData = CachedServers[ServerID]
         local localUsers = currentServerData and currentServerData.users or {}
-
         for _, player in ipairs(Players:GetPlayers()) do
-            local exists = localUsers[tostring(player.UserId)] or localUsers[player.UserId]
-            if exists or player == lp then
-                player:SetAttribute("ShadowPepperUser", true)
-            else
-                player:SetAttribute("ShadowPepperUser", nil)
-            end
-        end
-
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player:GetAttribute("ShadowPepperUser") == true then
-                local char = player.Character
-                local head = char and char:FindFirstChild("Head")
+            local exists = localUsers[tostring(player.UserId)] or player == lp
+            if exists then
+                local head = player.Character and player.Character:FindFirstChild("Head")
                 if head then
                     local marker = activeMarkers[player]
-                    if not marker or marker.Parent ~= char then
+                    if not marker or marker.Parent ~= player.Character then
                         if marker then marker:Destroy() end
-                        local bb = Instance.new("BillboardGui")
-                        bb.Name = "ShadowPepperUserMarker"
-                        bb.Adornee = head
+                        local bb = Instance.new("BillboardGui", player.Character)
                         bb.Size = UDim2.new(0, 100, 0, 50)
                         bb.StudsOffset = Vector3.new(0, 3.5, 0)
                         bb.AlwaysOnTop = true
-                        bb.Parent = char
-
                         local box = Instance.new("Frame", bb)
                         box.Size = UDim2.new(0, 24, 0, 24)
                         box.Position = UDim2.new(0.5, -12, 0, 0)
                         box.BackgroundColor3 = Color3.fromRGB(15, 14, 15)
                         Instance.new("UICorner", box).CornerRadius = UDim.new(1, 0)
-                        Instance.new("UIStroke", box).Color = Color3.fromRGB(200, 45, 45)
-
                         local img = Instance.new("ImageLabel", box)
                         img.Size = UDim2.new(1, -2, 1, -2)
                         img.Position = UDim2.new(0, 1, 0, 1)
-                        img.BackgroundTransparency = 1
                         img.Image = LOGO_ASSET
+                        img.BackgroundTransparency = 1
                         Instance.new("UICorner", img).CornerRadius = UDim.new(1, 0)
-
-                        local txt = Instance.new("TextLabel", bb)
-                        txt.Size = UDim2.new(1, 0, 0, 14)
-                        txt.Position = UDim2.new(0, 0, 0, 26)
-                        txt.BackgroundTransparency = 1
-                        txt.Text = player == lp and "You" or "Shadowpepper User"
-                        txt.TextColor3 = player == lp and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(255, 255, 255)
-                        txt.Font = Enum.Font.GothamBold
-                        txt.TextSize = 8
-                        txt.TextStrokeTransparency = 0.2
-
                         activeMarkers[player] = bb
                     end
-                    local bb = activeMarkers[player]
-                    if bb then
-                        bb.StudsOffset = Vector3.new(0, 3.5 + math.sin(tick() * 3) * 0.15, 0)
-                    end
-                else
-                    activeMarkers[player] = nil
                 end
             else
-                if activeMarkers[player] then
-                    activeMarkers[player]:Destroy()
-                    activeMarkers[player] = nil
-                end
+                if activeMarkers[player] then activeMarkers[player]:Destroy() activeMarkers[player] = nil end
             end
         end
     end
@@ -2418,7 +2040,4 @@ local function BuildUI()
 end
 
 BuildUI()
-
-task.defer(function()
-    StartAllScripts()
-end)
+StartAllScripts()
